@@ -66,6 +66,8 @@
 //#include "Ethernet_HttpClient.h"
 //#include "SSLClient/bearssl_x509.h"
 
+#include "EthernetHttpClient_SSL.h"
+
 
 //#include "EthernetWebServer_SSL.h"
 #include "functional-vlpp.h"
@@ -204,7 +206,8 @@ const char *ssid = IOT_CONFIG_WIFI_SSID;
 const char *password = IOT_CONFIG_WIFI_PASSWORD;
 
 //WiFiUDP udp;
-UIPUDP udp;
+//UIPUDP udp;
+EthernetUDP udp;
 
 const int rand_pin = A5;
 
@@ -674,7 +677,10 @@ if (Ethernet.begin(mac) != 1) {
 
 void loop() 
 { 
-  if (loopCounter++ % 10000 == 0)   // Make decisions to send data every 10000 th round and toggle Led to signal that App is running
+  //if (loopCounter++ % 10000 == 0)   // Make decisions to send data every 10000 th round and toggle Led to signal that App is running
+  
+  Ethernet.maintain();
+  if (loopCounter++ % 1 == 0)   // Make decisions to send data every 10000 th round and toggle Led to signal that App is running
   {
     uint32_t currentMillis = millis();
     ledState = !ledState;
@@ -1529,7 +1535,7 @@ az_http_status_code insertTableEntity(CloudStorageAccount *pAccountPtr, X509Cert
   DateTime responseHeaderDateTime = DateTime();   // Will be filled with DateTime value of the resonse from Azure Service
 
   // Insert Entity
-  az_http_status_code statusCode = table.InsertTableEntity(pTableName, pTableEntity, (char *)outInsertETag, &responseHeaderDateTime, contApplicationIatomIxml, acceptApplicationIjson, dont_returnContent, false);
+  az_http_status_code statusCode = table.InsertTableEntity(pTableName, pTableEntity, (char *)outInsertETag, &responseHeaderDateTime, contApplicationIatomIxml, acceptApplicationIjson, ResponseType::returnContent, false);
   
   #if WORK_WITH_WATCHDOG == 1
       SAMCrashMonitor::iAmAlive();

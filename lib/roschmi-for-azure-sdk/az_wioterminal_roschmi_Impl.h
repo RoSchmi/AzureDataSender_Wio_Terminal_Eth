@@ -16,28 +16,11 @@
 
 #include "az_wioterminal_roschmi.h"
 #include "EthernetHttpClient_SSL.h"
-//#include "HTTPClient.h"
-
 
 EthernetClient * inClient = NULL;
 
-//EthernetClient cl;
-//EthernetClient& reqClient = cl;
-
-
 br_x509_trust_anchor reqTrustAnchors;
 size_t reqNumTAs = 0;
-
-
-    
-   // _tAs = tAs;
-   // _useHttps = protocol == useHttps; 
-   // _ethernetClient = ethernet_client;
-
-   
-
-
-//const char * _caCertificate;
 
 const char * PROGMEM mess1 = "-1 Connection refused\r\n\0";
 const char * PROGMEM mess2 = "-2 Send Header failed\r\n\0";
@@ -70,9 +53,6 @@ az_http_client_send_request(az_http_request const* request, az_http_response* re
   // Working with spans
   //https://github.com/Azure/azure-sdk-for-c/tree/master/sdk/docs/core#working-with-spans
   
-
-
-
   az_http_method requMethod = request->_internal.method;
   int32_t max_header_count = request->_internal.max_headers;
   size_t headerCount = az_http_request_headers_count(request);
@@ -91,9 +71,7 @@ az_http_client_send_request(az_http_request const* request, az_http_response* re
   az_span urlWorkCopy = request->_internal.url;
 
   int32_t colonIndex = az_span_find(urlWorkCopy, AZ_SPAN_LITERAL_FROM_STR(":"));
-
-  
-		
+	
   char protocol[6] {0};
   urlWorkCopy = request->_internal.url;
   
@@ -137,19 +115,24 @@ EthernetClient reqClient;
 EthernetClient * ptr = &reqClient;
 ptr = inClient;
 
-//Client theClient;
-
-
 EthernetSSLClient sslClient(reqClient, &reqTrustAnchors, (size_t)reqNumTAs);
+
+
 
 EthernetHttpClient httpClient(reqClient, (char *)host.c_str(), port);
 
+//EthernetHttpClient httpClient(reqClient, (char *)host.c_str(), port);
+
+//EthernetHttpClient httpClient(sslClient, (char *)host.c_str(), port);
+
+/*
 if (port != 80)
 {
 
   EthernetHttpClient httpsClient(sslClient, (char *)host.c_str(), port);
   httpClient = httpsClient;
 }
+*/
 
   httpClient.connectionKeepAlive();
   httpClient.noDefaultRequestHeaders();

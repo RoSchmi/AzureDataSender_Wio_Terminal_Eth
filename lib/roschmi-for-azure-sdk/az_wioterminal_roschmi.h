@@ -14,7 +14,7 @@
 #include <azure/core/az_span.h>
 #include <azure/core/internal/az_span_internal.h>
 
-//#include "EthernetHttpClient_SSL.h"
+#include "EthernetHttpClient_SSL.h"
 
 //#include "SSLClient/SSLClient.h"
 
