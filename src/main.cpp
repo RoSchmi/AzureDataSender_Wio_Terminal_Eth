@@ -57,7 +57,9 @@
 #include "AzureStorage/OnOffTableEntity.h"
 
 
-#include "UIPEthernet.h"
+//#include "UIPEthernet.h"
+
+#include "EthernetENC.h"
 
 //#include "SSLClient/SSLClient.h"
 
