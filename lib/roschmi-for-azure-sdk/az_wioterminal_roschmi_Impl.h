@@ -16,8 +16,12 @@
 
 #include "az_wioterminal_roschmi.h"
 #include "EthernetHttpClient_SSL.h"
+#include "Ethernet_HTTPClient/Ethernet_HttpClient.h"
 
 EthernetClient * inClient = NULL;
+EthernetHttpClient * httpClient = NULL;
+EthernetSSLClient *inSSLClient = NULL;
+
 
 br_x509_trust_anchor reqTrustAnchors;
 size_t reqNumTAs = 0;
@@ -115,15 +119,21 @@ EthernetClient reqClient;
 EthernetClient * ptr = &reqClient;
 ptr = inClient;
 
-EthernetSSLClient sslClient(reqClient, &reqTrustAnchors, (size_t)reqNumTAs);
+static EthernetSSLClient sslClient(reqClient, &reqTrustAnchors, (size_t)reqNumTAs, 1, EthernetSSLClient::SSL_DUMP);
 
 
 
-EthernetHttpClient httpClient(reqClient, (char *)host.c_str(), port);
+
+
+
 
 //EthernetHttpClient httpClient(reqClient, (char *)host.c_str(), port);
 
-//EthernetHttpClient httpClient(sslClient, (char *)host.c_str(), port);
+
+
+//static EthernetHttpClient httpClient(sslClient, (char *)host.c_str(), port);
+
+
 
 /*
 if (port != 80)
@@ -134,12 +144,15 @@ if (port != 80)
 }
 */
 
-  httpClient.connectionKeepAlive();
-  httpClient.noDefaultRequestHeaders();
+  httpClient->connectionKeepAlive();
+  httpClient->noDefaultRequestHeaders();
+  
+  //volatile int connectResult = httpClient.connect((char *)host.c_str(), port);
+
   
   for (int i = 0; i < 3; i++)
   {
-     if (httpClient.connect((char *)host.c_str(), port))
+     if (httpClient->connect((char *)host.c_str(), port))
      { 
        volatile int dummy23 = 1;
        break; 
@@ -150,11 +163,12 @@ if (port != 80)
        delay(200); 
      }
   }
+  
 
-  if (httpClient.connected())
+  if (httpClient->connected())
   {
-    httpClient.beginRequest();
-    httpClient.post(resource);
+    httpClient->beginRequest();
+    httpClient->post(resource);
   
     char name_buffer[MAX_HEADERNAME_LENGTH +2] {0};
     char value_buffer[MAX_HEADERVALUE_LENGTH +2] {0};
@@ -173,12 +187,12 @@ if (port != 80)
       nameString = (char *)name_buffer;
       valueString = (char *)value_buffer;
     
-      httpClient.sendHeader(nameString, valueString);   
+      httpClient->sendHeader(nameString, valueString);   
     }
 
     //httpClient.sendHeader((char *)"Host", (char *)host.c_str());
   
-    httpClient.beginBody();
+    httpClient->beginBody();
   
 
     //devHttp->endRequest();
@@ -191,16 +205,19 @@ if (port != 80)
     int32_t maxSliceLength = 50;
     int32_t currIndex = 0;
 
+    // RoSchmi
     char buffer[900] {0};
-
     az_span_to_str(buffer, 899, request->_internal.body);
+    
+
+
 
 
     //char * bufPtr = buf;
     //bufPtr = (char *)request->_internal.body._internal.ptr;
     //char theOutput[] = "Roland";
 
-    httpClient.print((char *)buffer);
+    httpClient->print((char *)buffer);
     //httpClient.print("\r\n");
   
 
@@ -237,9 +254,9 @@ if (port != 80)
       
       volatile int httpCode = -1;
 
-      httpClient.endRequest();
+      httpClient->endRequest();
 
-      httpCode = httpClient.responseStatusCode();
+      httpCode = httpClient->responseStatusCode();
 
       /*
       uint32_t start = millis();
@@ -366,12 +383,12 @@ if (port != 80)
         
         // For debugging
         
-        //char buffer[1000];
-        az_span content = AZ_SPAN_FROM_BUFFER(buffer);
+        //char buffer[700];
+        //az_span content = AZ_SPAN_FROM_BUFFER(buffer);
 
-        az_http_response_get_body(ref_response, &content);
+        //az_http_response_get_body(ref_response, &content);
 
-        volatile int dummy349 = 1;
+        //volatile int dummy349 = 1;
         
         //  Here you can see the received payload in chunks 
         // if you set a breakpoint in the loop 
@@ -400,7 +417,7 @@ if (port != 80)
       }
       
     }
-    httpClient.stop();
+    httpClient->stop();
   }
     
     //httpClient.stop();
@@ -430,9 +447,10 @@ void setHttpClient(EthernetHttpClient * httpClient)
 }
 */
 
-void initializeRequest(EthernetClient * pReqClient, br_x509_trust_anchor pTAs, size_t pNumTAs)
+void initializeRequest(EthernetClient * pReqClient, EthernetHttpClient * pEthernetHttpClient, br_x509_trust_anchor pTAs, size_t pNumTAs)
 {
   inClient = pReqClient;
+  httpClient = pEthernetHttpClient;
   reqTrustAnchors = pTAs;
   reqNumTAs = pNumTAs;
 }
@@ -445,6 +463,11 @@ void initializeRequest(EthernetClient& pReqClient, br_x509_trust_anchor pTAs, si
   reqNumTAs = pNumTAs;
 }
 */
+
+void setHttpClient(EthernetHttpClient * pEthernetHttpClient)
+{
+    httpClient = pEthernetHttpClient;
+}
 
 /*
 void setDevClient(EthernetSSLClient * pDevClient)

@@ -96,8 +96,8 @@
 #include "mbedtls/base64.h"
 #include "mbedtls/sha256.h"
 
-#include "TFT_eSPI.h"
-#include "Free_Fonts.h" 
+//#include "TFT_eSPI.h"
+//#include "Free_Fonts.h" 
 
 #include "azure/core/az_platform.h"
 #include "azure/core/az_http.h"
@@ -149,6 +149,13 @@ ImuManagerWio imuManagerWio;
 
 LIS3DHTR<TwoWire> lis;
 
+#define DEBUG 1
+
+#define LOG_USB 1
+#define ACTLOGLEVEL = LOG_DEBUG_V3
+#define DebugLevel = SSL_INFO
+
+
 #define DHTPIN 0
 #define DHTTYPE DHT22
 
@@ -157,9 +164,10 @@ LIS3DHTR<TwoWire> lis;
 // I found out by trial that a value of 13 was o.k. for dubug mode and release mode 
 DHT dht(DHTPIN, DHTTYPE, 13);
 
-TFT_eSPI tft;
+//TFT_eSPI tft;
 int current_text_line = 0;
 
+/*
 #define LCD_WIDTH 320
 #define LCD_HEIGHT 240
 #define LCD_FONT FreeSans9pt7b
@@ -170,6 +178,7 @@ const GFXfont *textFont = FSSB9;
 uint32_t screenColor = TFT_BLUE;
 uint32_t backColor = TFT_WHITE;
 uint32_t textColor = TFT_BLACK;
+*/
 
 bool showGraphScreen = SHOW_GRAPHIC_SCREEN == 1;
 
@@ -207,6 +216,8 @@ const char *password = IOT_CONFIG_WIFI_PASSWORD;
 
 //WiFiUDP udp;
 //UIPUDP udp;
+
+
 EthernetUDP udp;
 
 const int rand_pin = A5;
@@ -272,6 +283,10 @@ static void button_handler_left()
   onOffDataContainer.SetNewOnOffValue(0, state == 0, utcNow, timeZoneOffsetUTC);
 }
 
+void lcd_log_line(char* line) 
+{ 
+}
+/*
 // Routine to send messages to the display
 void lcd_log_line(char* line) 
 {  
@@ -286,10 +301,11 @@ void lcd_log_line(char* line)
     tft.fillScreen(screenColor);
   }
 }
+*/
 
 // forward declarations
 unsigned long getNTPtime();
-unsigned long sendNTPpacket(const char* address);
+unsigned long sendNTPpacket(EthernetUDP * udp, const char* address);
 String floToStr(float value);
 float ReadAnalogSensor(int pSensorIndex);
 DateTime actualizeSysTimeFromNtp();
@@ -318,12 +334,13 @@ void myCrashHandler(SAMCrashReport &report)
 void setup() 
 { 
 
- 
+  /*
   tft.begin();
   tft.setRotation(3);
   tft.fillScreen(screenColor);
   tft.setFreeFont(&LCD_FONT);
   tft.setTextColor(TFT_BLACK);
+  */
 
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(WIO_LIGHT, INPUT );
@@ -507,13 +524,13 @@ if (!WiFi.enableSTA(true))
   #endif
 
 #if USE_ENC28_ETHERNET == 1
-#if USE_ETHERNET_WRAPPER
+    #if USE_ETHERNET_WRAPPER
 
-  EthernetInit();
+      EthernetInit();
 
-#endif
-uint8_t mac[6] = {0x74,0x69,0x69,0x2D,0x30,0x31};
-if (Ethernet.begin(mac) != 1) {
+    #endif
+    uint8_t mac[6] = {0x74,0x69,0x69,0x2D,0x30,0x31};
+    if (Ethernet.begin(mac) != 1) {
      Serial.println("Failed to configure Ethernet using DHCP");
      while (true) {
         delay(1); // do nothing, no point running without Ethernet hardware
@@ -567,6 +584,7 @@ if (Ethernet.begin(mac) != 1) {
     #endif
   }
   
+  /*
   current_text_line = 0;
   tft.fillScreen(screenColor);
     
@@ -581,6 +599,9 @@ if (Ethernet.begin(mac) != 1) {
   lcd_log_line(buf);
   sprintf(buf, "Protocol: %s", UseHttps_State ? (char *)"https" : (char *)"http");
   lcd_log_line(buf);
+  */
+
+  //EthernetUDP udp;
   
   ntpUpdateInterval =  (NTP_UPDATE_INTERVAL_MINUTES < 1 ? 1 : NTP_UPDATE_INTERVAL_MINUTES) * 60 * 1000;
 
@@ -653,7 +674,7 @@ if (Ethernet.begin(mac) != 1) {
 
   // Clear screen
   current_text_line = 0;
-  tft.fillScreen(screenColor);
+  //tft.fillScreen(screenColor);
   
   dateTimeUTCNow = sysTime.getTime();
   time_helpers.update(dateTimeUTCNow);
@@ -961,6 +982,7 @@ void loop()
     {
       if (showGraphScreen)
       {
+        /*
         textColor = TFT_BLACK;
         screenColor = TFT_WHITE;
         backColor = TFT_WHITE;        
@@ -969,6 +991,7 @@ void loop()
         current_text_line = 0;
         lcd_log_line((char *)"Log:");
         showGraphScreen = !showGraphScreen;
+        */
       }
       else
       {
@@ -992,6 +1015,11 @@ void loop()
   loopCounter++;
 }                      // End loop
 
+void showDisplayFrame()
+{
+}
+
+/*
 void showDisplayFrame()
 {
   if (showGraphScreen)
@@ -1024,7 +1052,11 @@ void showDisplayFrame()
     lcd_log_line((char *)line);
   }
 }
+*/
 
+void fillDisplayFrame(double an_1, double an_2, double an_3, double an_4, bool on_1,  bool on_2, bool on_3, bool on_4, bool pSendResultState, uint32_t pTryUploadCtr)
+{}
+/*
 void fillDisplayFrame(double an_1, double an_2, double an_3, double an_4, bool on_1,  bool on_2, bool on_3, bool on_4, bool pSendResultState, uint32_t pTryUploadCtr)
 {
   if (showGraphScreen)
@@ -1136,6 +1168,7 @@ void fillDisplayFrame(double an_1, double an_2, double an_3, double an_4, bool o
     tft.fillRect(244, 12 * LCD_LINE_HEIGHT, 60, LCD_LINE_HEIGHT, on_4 ? TFT_RED : TFT_DARKGREY);
   }
 }
+*/
 
 // To manage daylightsavingstime stuff convert input ("Last", "First", "Second", "Third", "Fourth") to int equivalent
 int getWeekOfMonthNum(const char * weekOfMonth)
@@ -1182,6 +1215,9 @@ unsigned long getNTPtime()
     
     //RoSchmi
     //if (WiFi.status() == WL_CONNECTED)
+
+    //EthernetUDP udp;
+
     if (true)
     {
         //initializes the UDP state
@@ -1190,7 +1226,7 @@ unsigned long getNTPtime()
         //udp.begin(WiFi.localIP(), localPort);
         udp.begin(localPort);
  
-        sendNTPpacket(timeServer); // send an NTP packet to a time server
+        sendNTPpacket(&udp, timeServer); // send an NTP packet to a time server
         // wait to see if a reply is available
      
         delay(1000);
@@ -1243,7 +1279,7 @@ unsigned long getNTPtime()
 }
  
 // send an NTP request to the time server at the given address
-unsigned long sendNTPpacket(const char* address) {
+unsigned long sendNTPpacket(EthernetUDP * udp, const char* address) {
     // set all bytes in the buffer to 0
     for (int i = 0; i < NTP_PACKET_SIZE; ++i) {
         packetBuffer[i] = 0;
@@ -1262,9 +1298,9 @@ unsigned long sendNTPpacket(const char* address) {
  
     // all NTP fields have been given values, now
     // you can send a packet requesting a timestamp:
-    udp.beginPacket(address, 123); //NTP requests are to port 123
-    udp.write(packetBuffer, NTP_PACKET_SIZE);
-    udp.endPacket();
+    udp->beginPacket(address, 123); //NTP requests are to port 123
+    udp->write(packetBuffer, NTP_PACKET_SIZE);
+    udp->endPacket();
     return 0;
 }
 
@@ -1481,7 +1517,17 @@ az_http_status_code insertTableEntity(CloudStorageAccount *pAccountPtr, X509Cert
 { 
   
 #if USE_ENC28_ETHERNET == 1   
-  static EthernetClient  client;       
+  static EthernetClient  client;
+
+    EthernetSSLClient sslClient(client, TAs, (size_t)TAs_NUM, 1, EthernetSSLClient::SSL_DUMP);
+    
+    char url[] = "prax47.table.core.windows.net";
+    EthernetHttpClient  httpClient(sslClient, url, 443);
+    //httpClient.connectionKeepAlive();
+    //httpClient.noDefaultRequestHeaders();
+    //volatile int connectResult = httpClient.connect((char *)url, 443);
+
+
 #else
   #if TRANSPORT_PROTOCOL == 1
       static WiFiClientSecure wifi_client;
@@ -1519,7 +1565,7 @@ az_http_status_code insertTableEntity(CloudStorageAccount *pAccountPtr, X509Cert
     //TableClient table(pAccountPtr, TAs, (size_t)TAs_NUM, &client ); //    pAccountPtr,  * TAs, (size_t)TAs_NUM, &client);
     //TableClient table(pAccountPtr, TAs[(size_t)TAs_NUM], (size_t)TAs_NUM, &client);
     //TableClient table(pAccountPtr, TAs[(size_t)TAs_NUM], (size_t)TAs_NUM, &client);
-    TableClient table(pAccountPtr, Protocol::useHttps, TAs[(size_t)TAs_NUM], (size_t)TAs_NUM, &client);
+    TableClient table(pAccountPtr, Protocol::useHttps, TAs[(size_t)TAs_NUM], (size_t)TAs_NUM, &client, &sslClient, &httpClient);
     //TableClient table(pAccountPtr, Protocol::useHttps, TAs[(size_t)TAs_NUM], (size_t)TAs_NUM, client);
     //Protocol::useHttps,  
 
@@ -1535,7 +1581,7 @@ az_http_status_code insertTableEntity(CloudStorageAccount *pAccountPtr, X509Cert
   DateTime responseHeaderDateTime = DateTime();   // Will be filled with DateTime value of the resonse from Azure Service
 
   // Insert Entity
-  az_http_status_code statusCode = table.InsertTableEntity(pTableName, pTableEntity, (char *)outInsertETag, &responseHeaderDateTime, contApplicationIatomIxml, acceptApplicationIjson, ResponseType::returnContent, false);
+  az_http_status_code statusCode = table.InsertTableEntity(pTableName, pTableEntity, (char *)outInsertETag, &responseHeaderDateTime, contApplicationIatomIxml, acceptApplicationIjson, ResponseType::dont_returnContent, false);
   
   #if WORK_WITH_WATCHDOG == 1
       SAMCrashMonitor::iAmAlive();
@@ -1627,7 +1673,19 @@ az_http_status_code createTable(CloudStorageAccount *pAccountPtr, X509Certificat
 { 
 
   #if USE_ENC28_ETHERNET == 1   
-    static EthernetClient  client;       
+    static EthernetClient  client;
+    
+    EthernetSSLClient sslClient(client, TAs, (size_t)TAs_NUM, 1, EthernetSSLClient::SSL_DUMP);
+    
+    char url[] = "prax47.table.core.windows.net";
+    EthernetHttpClient  httpClient(sslClient, url, 443);
+    //httpClient.connectionKeepAlive();
+    //httpClient.noDefaultRequestHeaders(); 
+    //volatile int connectResult = httpClient.connect((char *)url, 443);
+
+    //volatile int dummy34 = 1;
+    
+       
   #else
     #if TRANSPORT_PROTOCOL == 1
       static WiFiClientSecure wifi_client;
@@ -1653,7 +1711,7 @@ az_http_status_code createTable(CloudStorageAccount *pAccountPtr, X509Certificat
     //TableClient table(pAccountPtr, pCaCert,  httpPtr, &sslClient);
     //TableClient table(pAccountPtr, TAs, (size_t)TAs_NUM, &client);
     //TableClient table(pAccountPtr, TAs[(size_t)TAs_NUM], (size_t)TAs_NUM, &client);
-    TableClient table(pAccountPtr, Protocol::useHttps, TAs[(size_t)TAs_NUM], (size_t)TAs_NUM, &client);
+    TableClient table(pAccountPtr, Protocol::useHttps, TAs[(size_t)TAs_NUM], (size_t)TAs_NUM, &client, &sslClient, &httpClient);
     //TableClient table(pAccountPtr, Protocol::useHttps, TAs[(size_t)TAs_NUM], (size_t)TAs_NUM, client);
 
     #endif

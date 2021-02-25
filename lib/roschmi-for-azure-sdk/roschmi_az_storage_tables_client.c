@@ -252,11 +252,11 @@ _az_RETURN_IF_FAILED(az_http_request_append_header(
       &request, AZ_STORAGE_TABLES_HEADER_MAX_DATASERVICE_VERSION, AZ_STORAGE_TABLES_MAX_DATASERVICE_VERS_3_0_NETFX));
 
 // Add Accept-Encoding header: chunked. Using identity evtl. caused issues
-  _az_RETURN_IF_FAILED(
-     az_http_request_append_header(&request, AZ_HTTP_HEADER_ACCEPT_ENCODING, AZ_HTTP_ACCEPT_ENCODING_CHUNKED));
+//  _az_RETURN_IF_FAILED(
+//     az_http_request_append_header(&request, AZ_HTTP_HEADER_ACCEPT_ENCODING, AZ_HTTP_ACCEPT_ENCODING_CHUNKED));
 
- //_az_RETURN_IF_FAILED(
- //    az_http_request_append_header(&request, AZ_HTTP_HEADER_ACCEPT_ENCODING, AZ_HTTP_ACCEPT_ENCODING_IDENTITY));
+ _az_RETURN_IF_FAILED(
+     az_http_request_append_header(&request, AZ_HTTP_HEADER_ACCEPT_ENCODING, AZ_HTTP_ACCEPT_ENCODING_IDENTITY));
 
     
 

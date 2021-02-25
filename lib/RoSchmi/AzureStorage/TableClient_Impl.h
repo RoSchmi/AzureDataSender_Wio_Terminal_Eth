@@ -17,6 +17,8 @@ bool _useHttps = true;
 //EthernetClient& _ethernetClient;
 
 EthernetClient * _ethernetClient;
+EthernetSSLClient * _ethernetSslClient;
+EthernetHttpClient * _ethernetHttpClient;
 CloudStorageAccount  * _accountPtr;
 br_x509_trust_anchor _tAs;
 size_t _numTAs = 0;
@@ -144,14 +146,19 @@ void TableClient::CreateTableAuthorizationHeader(const char * content, const cha
 //protocol,
 
 //TableClient::TableClient(CloudStorageAccount *account, br_x509_trust_anchor * tAs, size_t numTA, EthernetClient * ethernet_client)
-TableClient::TableClient(CloudStorageAccount *account, Protocol protocol, br_x509_trust_anchor tAs, size_t numTA, EthernetClient * ethernet_client)
+TableClient::TableClient(CloudStorageAccount *account, Protocol protocol, br_x509_trust_anchor tAs, size_t numTA, EthernetClient * ethernet_client, EthernetSSLClient * ethernetSslClient, EthernetHttpClient * ethernetHttpClient)
 //TableClient::TableClient(CloudStorageAccount *account, Protocol protocol, br_x509_trust_anchor tAs, size_t numTA, EthernetClient& ethernet_client)
 {
     _accountPtr = account;
     _numTAs = numTA;
     _tAs = tAs;
     _useHttps = protocol == useHttps; 
-    _ethernetClient = ethernet_client;   
+    _ethernetClient = ethernet_client;
+    _ethernetSslClient = ethernetSslClient;
+    _ethernetHttpClient = ethernetHttpClient;
+
+
+
 }
 //#else
 /*
@@ -172,6 +179,15 @@ TableClient::~TableClient()
 az_http_status_code TableClient::CreateTable(const char * tableName, ContType pContentType, 
 AcceptType pAcceptType, ResponseType pResponseType, bool useSharedKeyLite)
 {
+    /*
+    _ethernetHttpClient->connectionKeepAlive();
+     _ethernetHttpClient->noDefaultRequestHeaders();
+     char url[] = "prax47.table.core.windows.net";
+     volatile int connectResult = _ethernetHttpClient->connect((char *)url, 443);
+
+     volatile int dummy578 = 1; 
+    */
+
    // limit length of tablename to max_tablename_length
    char * validTableName = (char *)tableName;
    if (strlen(tableName) >  MAX_TABLENAME_LENGTH)
@@ -282,7 +298,7 @@ AcceptType pAcceptType, ResponseType pResponseType, bool useSharedKeyLite)
   apiOptions._internal.option_location = _az_http_policy_apiversion_option_location_header;
   
 
-   initializeRequest(_ethernetClient, _tAs, _numTAs);
+   initializeRequest(_ethernetClient, _ethernetHttpClient, _tAs, _numTAs);
   //setHttpClient(_httpPtr);
   //setCaCert(_caCert);
   //setWiFiClient(_wifiClient);
@@ -458,7 +474,7 @@ AcceptType pAcceptType, ResponseType pResponseType, bool useSharedKeyLite)
   uploadOptions._internal.perferType = responseTypeAzSpan;
 
   //set HTTPClient and certificate
-  initializeRequest(_ethernetClient, _tAs, _numTAs);
+  initializeRequest(_ethernetClient, _ethernetHttpClient, _tAs, _numTAs);
   //setHttpClient(_httpPtr);
   //setCaCert(_caCert);
   //setWiFiClient(_wifiClient);

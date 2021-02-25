@@ -76,7 +76,7 @@ TableClient(CloudStorageAccount *account, const char * caCert, HTTPClient *httpC
 //TableClient(CloudStorageAccount *account, const char * caCert, EthernetHttpClient *httpClient);
 
 //TableClient(CloudStorageAccount *account,  br_x509_trust_anchor * tAs, size_t num, EthernetClient * ethernet_client); // EthernetSSLClient * ethernet_client);
-TableClient(CloudStorageAccount *account, Protocol protocol, br_x509_trust_anchor tAs, size_t numTA, EthernetClient * ethernet_client);
+TableClient(CloudStorageAccount *account, Protocol protocol, br_x509_trust_anchor tAs, size_t numTA, EthernetClient * ethernet_client, EthernetSSLClient * ethernetSslClient, EthernetHttpClient * ethernetHttpClient);
 //TableClient(CloudStorageAccount *account, Protocol protocol, br_x509_trust_anchor tAs, size_t numTA, EthernetClient&  ethernet_client);
 //Protocol protocol,
 // SysTime * systime
