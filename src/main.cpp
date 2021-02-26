@@ -1,21 +1,21 @@
 
 
 
-// Application AzureDataSender_Wio_Terminal 
+// Application AzureDataSender_Wio_Terminal_Eth 
 // Copyright RoSchmi 2020, 2021. License Apache 2.0
 
-// Set WiFi and Azure credentials in file include/config_secret.h  (take config_secret_template.h as template)
+// Set Azure credentials in file include/config_secret.h  (take config_secret_template.h as template)
 // Settings like sendinterval, timezone, daylightsavingstime settings, transport protocol, 
 // tablenames and so on are to be defined in /include/config.h
 
 
-  // I started to make this App from the Azure Storage Blob Example see: 
+  // I started to make this App with the Azure Storage Blob Example as a template, see: 
   // https://github.com/Azure/azure-sdk-for-c/blob/5c7444dfcd5f0b3bcf3aec2f7b62639afc8bd664/sdk/samples/storage/blobs/src/blobs_client_example.c
 
   // The used Azure-sdk-for-c libraries were Vers. 1.1.0-beta.3
   // https://github.com/Azure/azure-sdk-for-c/releases/tag/1.1.0-beta.3
   // In Vers. 1.1.0-beta.3 was a difficult to find bug in the file az_http_internal.h
-  // which is fixed in this repo and in later versions of the Microsoft repo
+  // which is fixed in this repo and was fixed in later versions of the Microsoft repo
 
   
 // Memory usage Wio Terminal
@@ -44,9 +44,7 @@
 #include "config.h"
 #include "config_secret.h"
 
-//#include "SSLCLIENT/bearssl_x509.h"
-
-// You must have SSL Certificates here
+// SSL Certificates for server verfication are in this file
 #include "trust_anchors.h"
 
 #include "AzureStorage/CloudStorageAccount.h"
@@ -56,16 +54,7 @@
 #include "AzureStorage/AnalogTableEntity.h"
 #include "AzureStorage/OnOffTableEntity.h"
 
-
-//#include "UIPEthernet.h"
-
 #include "EthernetENC.h"
-
-//#include "SSLClient/SSLClient.h"
-
-//#include "Ethernet_HttpClient.h"
-//#include "SSLClient/bearssl_x509.h"
-
 #include "EthernetHttpClient_SSL.h"
 
 
@@ -96,8 +85,8 @@
 #include "mbedtls/base64.h"
 #include "mbedtls/sha256.h"
 
-//#include "TFT_eSPI.h"
-//#include "Free_Fonts.h" 
+#include "TFT_eSPI.h"
+#include "Free_Fonts.h" 
 
 #include "azure/core/az_platform.h"
 #include "azure/core/az_http.h"
@@ -164,10 +153,10 @@ LIS3DHTR<TwoWire> lis;
 // I found out by trial that a value of 13 was o.k. for dubug mode and release mode 
 DHT dht(DHTPIN, DHTTYPE, 13);
 
-//TFT_eSPI tft;
+TFT_eSPI tft;
 int current_text_line = 0;
 
-/*
+
 #define LCD_WIDTH 320
 #define LCD_HEIGHT 240
 #define LCD_FONT FreeSans9pt7b
@@ -178,7 +167,7 @@ const GFXfont *textFont = FSSB9;
 uint32_t screenColor = TFT_BLUE;
 uint32_t backColor = TFT_WHITE;
 uint32_t textColor = TFT_BLACK;
-*/
+
 
 bool showGraphScreen = SHOW_GRAPHIC_SCREEN == 1;
 
@@ -214,19 +203,12 @@ DateTime dateTimeUTCNow;
 const char *ssid = IOT_CONFIG_WIFI_SSID;
 const char *password = IOT_CONFIG_WIFI_PASSWORD;
 
-//WiFiUDP udp;
-//UIPUDP udp;
-
-
 EthernetUDP udp;
 
 const int rand_pin = A5;
 
-//static EthernetClient  client;
-
 // must be static !!
 static SysTime sysTime;
-
 
 Rs_time_helpers time_helpers;
 
@@ -236,6 +218,7 @@ X509Certificate myX509Certificate = baltimore_root_ca;
 
 // Set transport protocol as defined in config.h
 static bool UseHttps_State = TRANSPORT_PROTOCOL == 0 ? false : true;
+
 CloudStorageAccount myCloudStorageAccount(AZURE_CONFIG_ACCOUNT_NAME, AZURE_CONFIG_ACCOUNT_KEY, UseHttps_State);
 CloudStorageAccount * myCloudStorageAccountPtr = &myCloudStorageAccount;
 
@@ -253,8 +236,6 @@ char PROGMEM spacesArray[13][13] = {  "",
                                       "          ", 
                                       "           ",  
                                       "            "};
-
-
 
 static void button_handler_right() 
 {
@@ -283,10 +264,6 @@ static void button_handler_left()
   onOffDataContainer.SetNewOnOffValue(0, state == 0, utcNow, timeZoneOffsetUTC);
 }
 
-void lcd_log_line(char* line) 
-{ 
-}
-/*
 // Routine to send messages to the display
 void lcd_log_line(char* line) 
 {  
@@ -301,7 +278,6 @@ void lcd_log_line(char* line)
     tft.fillScreen(screenColor);
   }
 }
-*/
 
 // forward declarations
 unsigned long getNTPtime();
@@ -333,14 +309,11 @@ void myCrashHandler(SAMCrashReport &report)
 
 void setup() 
 { 
-
-  /*
   tft.begin();
   tft.setRotation(3);
   tft.fillScreen(screenColor);
   tft.setFreeFont(&LCD_FONT);
   tft.setTextColor(TFT_BLACK);
-  */
 
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(WIO_LIGHT, INPUT );
@@ -394,7 +367,6 @@ void setup()
   // buffer to hold messages for display
   char buf[100];
   
-
   #if USE_ENC28_ETHERNET == 0
   sprintf(buf, "RTL8720 Firmware: %s", rpc_system_version());
   lcd_log_line(buf);
@@ -438,13 +410,12 @@ void setup()
     }
   }
 
-  delay(500);
+delay(500);
   
 
-  #if USE_ENC28_ETHERNET == 0
+#if USE_ENC28_ETHERNET == 0
   //Set WiFi to station mode and disconnect from an AP if it was previously connected
   
-
   WiFi.mode(WIFI_STA);
   lcd_log_line((char *)"First disconnecting.");
   while (WiFi.status() != WL_DISCONNECTED)
@@ -471,20 +442,23 @@ void setup()
       }
   }
 
-#if USE_WIFI_STATIC_IP == 1
-  IPAddress presetIp(192, 168, 1, 83);
-  IPAddress presetGateWay(192, 168, 1, 1);
-  IPAddress presetSubnet(255, 255, 255, 0);
-  IPAddress presetDnsServer1(8,8,8,8);
-  IPAddress presetDnsServer2(8,8,4,4);
-#endif
+  #if USE_WIFI_STATIC_IP == 1
+    IPAddress presetIp(192, 168, 1, 83);
+    IPAddress presetGateWay(192, 168, 1, 1);
+    IPAddress presetSubnet(255, 255, 255, 0);
+    IPAddress presetDnsServer1(8,8,8,8);
+    IPAddress presetDnsServer2(8,8,4,4);
+  #endif
 
 WiFi.begin(ssid, password);
  
 if (!WiFi.enableSTA(true))
 {
+
   #if WORK_WITH_WATCHDOG == 1   
     __unused int timeout = SAMCrashMonitor::enableWatchdog(4000);
+    sprintf(buf, "Watchdog enabled: %i %s", timeout, "ms");
+    lcd_log_line(buf);
   #endif
 
   while (true)
@@ -495,7 +469,7 @@ if (!WiFi.enableSTA(true))
     }
 }
 
-#if USE_ENC28_ETHERNET == 0
+//#if USE_ENC28_ETHERNET == 0
   if (!WiFi.config(presetIp, presetGateWay, presetSubnet, presetDnsServer1, presetDnsServer2))
   {
     while (true)
@@ -510,8 +484,7 @@ if (!WiFi.enableSTA(true))
     lcd_log_line((char *)"WiFi-Config successful");
     delay(1000);
   }
-  #endif
-
+  
   while (WiFi.status() != WL_CONNECTED)
   {  
     delay(1000);
@@ -521,7 +494,7 @@ if (!WiFi.enableSTA(true))
 
   lcd_log_line((char *)"Connected, new Status:");
   lcd_log_line(itoa((int)WiFi.status(), buf, 10));
-  #endif
+#endif
 
 #if USE_ENC28_ETHERNET == 1
     #if USE_ETHERNET_WRAPPER
@@ -529,26 +502,24 @@ if (!WiFi.enableSTA(true))
       EthernetInit();
 
     #endif
-    uint8_t mac[6] = {0x74,0x69,0x69,0x2D,0x30,0x31};
-    if (Ethernet.begin(mac) != 1) {
-     Serial.println("Failed to configure Ethernet using DHCP");
-     while (true) {
-        delay(1); // do nothing, no point running without Ethernet hardware
-     }
-  }
 
-#endif
-
-
-
-  #if WORK_WITH_WATCHDOG == 1
-    
-    Serial.println(F("Enabling watchdog."));
-    int timeout = SAMCrashMonitor::enableWatchdog(4000);
+  #if WORK_WITH_WATCHDOG == 1   
+    __unused int timeout = SAMCrashMonitor::enableWatchdog(4000);
     sprintf(buf, "Watchdog enabled: %i %s", timeout, "ms");
     lcd_log_line(buf);
   #endif
-  
+
+  uint8_t mac[6] = {0x74,0x69,0x69,0x2D,0x30,0x31};
+  if (Ethernet.begin(mac) != 1) 
+  {
+    Serial.println("Failed to configure Ethernet using DHCP");
+    while (true) 
+    {
+      delay(1); // do nothing, no point running without Ethernet hardware
+    }
+  }
+#endif
+ 
   #if USE_ENC28_ETHERNET == 0
   IPAddress localIpAddress = WiFi.localIP();
   IPAddress gatewayIp =  WiFi.gatewayIP();
@@ -563,8 +534,6 @@ if (!WiFi.enableSTA(true))
   IPAddress dnsServerIp = Ethernet.dnsServerIP();
   #endif
 
-  
- 
   Serial.print("My IP: ");
   Serial.println(Ethernet.localIP());
   Serial.print("Netmask: ");
@@ -584,7 +553,6 @@ if (!WiFi.enableSTA(true))
     #endif
   }
   
-  /*
   current_text_line = 0;
   tft.fillScreen(screenColor);
     
@@ -599,9 +567,6 @@ if (!WiFi.enableSTA(true))
   lcd_log_line(buf);
   sprintf(buf, "Protocol: %s", UseHttps_State ? (char *)"https" : (char *)"http");
   lcd_log_line(buf);
-  */
-
-  //EthernetUDP udp;
   
   ntpUpdateInterval =  (NTP_UPDATE_INTERVAL_MINUTES < 1 ? 1 : NTP_UPDATE_INTERVAL_MINUTES) * 60 * 1000;
 
@@ -698,11 +663,13 @@ if (!WiFi.enableSTA(true))
 
 void loop() 
 { 
-  //if (loopCounter++ % 10000 == 0)   // Make decisions to send data every 10000 th round and toggle Led to signal that App is running
   
-  Ethernet.maintain();
-  if (loopCounter++ % 1 == 0)   // Make decisions to send data every 10000 th round and toggle Led to signal that App is running
+  
+  if (loopCounter++ % 1000 == 0)   // Make decisions to send data every 1000 th round and toggle Led to signal that App is running
   {
+    
+    Ethernet.maintain();  // Needed for EthernetENC library
+
     uint32_t currentMillis = millis();
     ledState = !ledState;
     digitalWrite(LED_BUILTIN, ledState);
@@ -919,8 +886,6 @@ void loop()
               
               TimeSpan TimeFromLast = onOffValueSet.OnOffSampleValues[i].TimeFromLast;
 
-
-
               char timefromLast[15] = {0};
               sprintf(timefromLast, "%03i-%02i:%02i:%02i", TimeFromLast.days(), TimeFromLast.hours(), TimeFromLast.minutes(), TimeFromLast.seconds());
                          
@@ -982,7 +947,6 @@ void loop()
     {
       if (showGraphScreen)
       {
-        /*
         textColor = TFT_BLACK;
         screenColor = TFT_WHITE;
         backColor = TFT_WHITE;        
@@ -991,7 +955,6 @@ void loop()
         current_text_line = 0;
         lcd_log_line((char *)"Log:");
         showGraphScreen = !showGraphScreen;
-        */
       }
       else
       {
@@ -1015,11 +978,7 @@ void loop()
   loopCounter++;
 }                      // End loop
 
-void showDisplayFrame()
-{
-}
 
-/*
 void showDisplayFrame()
 {
   if (showGraphScreen)
@@ -1052,11 +1011,8 @@ void showDisplayFrame()
     lcd_log_line((char *)line);
   }
 }
-*/
 
-void fillDisplayFrame(double an_1, double an_2, double an_3, double an_4, bool on_1,  bool on_2, bool on_3, bool on_4, bool pSendResultState, uint32_t pTryUploadCtr)
-{}
-/*
+
 void fillDisplayFrame(double an_1, double an_2, double an_3, double an_4, bool on_1,  bool on_2, bool on_3, bool on_4, bool pSendResultState, uint32_t pTryUploadCtr)
 {
   if (showGraphScreen)
@@ -1168,7 +1124,7 @@ void fillDisplayFrame(double an_1, double an_2, double an_3, double an_4, bool o
     tft.fillRect(244, 12 * LCD_LINE_HEIGHT, 60, LCD_LINE_HEIGHT, on_4 ? TFT_RED : TFT_DARKGREY);
   }
 }
-*/
+
 
 // To manage daylightsavingstime stuff convert input ("Last", "First", "Second", "Third", "Fourth") to int equivalent
 int getWeekOfMonthNum(const char * weekOfMonth)
@@ -1215,8 +1171,6 @@ unsigned long getNTPtime()
     
     //RoSchmi
     //if (WiFi.status() == WL_CONNECTED)
-
-    //EthernetUDP udp;
 
     if (true)
     {
@@ -1514,20 +1468,16 @@ void makePartitionKey(const char * partitionKeyprefix, bool augmentWithYear, Dat
 
 
 az_http_status_code insertTableEntity(CloudStorageAccount *pAccountPtr, X509Certificate pCaCert, const char * pTableName, TableEntity pTableEntity, char * outInsertETag)
-{ 
+{
   
 #if USE_ENC28_ETHERNET == 1   
   static EthernetClient  client;
-
+  #if TRANSPORT_PROTOCOL == 1
     EthernetSSLClient sslClient(client, TAs, (size_t)TAs_NUM, 1, EthernetSSLClient::SSL_DUMP);
-    
-    char url[] = "prax47.table.core.windows.net";
-    EthernetHttpClient  httpClient(sslClient, url, 443);
-    //httpClient.connectionKeepAlive();
-    //httpClient.noDefaultRequestHeaders();
-    //volatile int connectResult = httpClient.connect((char *)url, 443);
-
-
+    EthernetHttpClient  httpClient(sslClient, pAccountPtr->HostNameTable, (TRANSPORT_PROTOCOL == 0) ? 80 : 443);
+  #else
+    EthernetHttpClient  httpClient(client, pAccountPtr->HostNameTable, (TRANSPORT_PROTOCOL == 0) ? 80 : 443);
+  #endif
 #else
   #if TRANSPORT_PROTOCOL == 1
       static WiFiClientSecure wifi_client;
@@ -1535,16 +1485,13 @@ az_http_status_code insertTableEntity(CloudStorageAccount *pAccountPtr, X509Cert
       static WiFiClient wifi_client;
   #endif
 #endif
-  
-  
-  
-  #if USE_ENC28_ETHERNET == 0
-    #if TRANSPORT_PROTOCOL == 1
     
-      wifi_client.setCACert(myX509Certificate);
+#if USE_ENC28_ETHERNET == 0
+  #if TRANSPORT_PROTOCOL == 1  
+    wifi_client.setCACert(myX509Certificate);
     //wifi_client.setCACert(baltimore_corrupt_root_ca);
-    #endif
   #endif
+#endif
   
 
   /*
@@ -1557,21 +1504,9 @@ az_http_status_code insertTableEntity(CloudStorageAccount *pAccountPtr, X509Cert
     }
   #endif
   */
-#if USE_ENC28_ETHERNET == 0
-    TableClient table(pAccountPtr, pCaCert,  httpPtr, &wifi_client);
-    #else
-    //TableClient table(pAccountPtr, pCaCert,  httpPtr, &ethernet_client);
-    //TableClient table(pAccountPtr, pCaCert,  httpPtr);
-    //TableClient table(pAccountPtr, TAs, (size_t)TAs_NUM, &client ); //    pAccountPtr,  * TAs, (size_t)TAs_NUM, &client);
-    //TableClient table(pAccountPtr, TAs[(size_t)TAs_NUM], (size_t)TAs_NUM, &client);
-    //TableClient table(pAccountPtr, TAs[(size_t)TAs_NUM], (size_t)TAs_NUM, &client);
-    TableClient table(pAccountPtr, Protocol::useHttps, TAs[(size_t)TAs_NUM], (size_t)TAs_NUM, &client, &sslClient, &httpClient);
-    //TableClient table(pAccountPtr, Protocol::useHttps, TAs[(size_t)TAs_NUM], (size_t)TAs_NUM, client);
-    //Protocol::useHttps,  
 
-    
-    //sslClient
-    #endif
+  TableClient table(pAccountPtr, (TRANSPORT_PROTOCOL == 0) ? Protocol::useHttp : Protocol::useHttps, TAs[(size_t)TAs_NUM], (size_t)TAs_NUM, &client, &sslClient, &httpClient);
+
   
   
   #if WORK_WITH_WATCHDOG == 1
