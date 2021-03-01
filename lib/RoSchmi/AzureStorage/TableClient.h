@@ -63,25 +63,9 @@ typedef enum
 class TableClient
 {
 public:
-/*
-#if USE_ENC28_ETHERNET == 1
-TableClient(CloudStorageAccount *account, const char * caCert, HTTPClient *httpClient, EthernetSSLClient  * ethernet_client);
-#else
-TableClient(CloudStorageAccount *account, const char * caCert, HTTPClient *httpClient, WiFiClient * wifiClient);
-#endif
-*/
 
-//TableClient(CloudStorageAccount *account, const char * caCert, HTTPClient *httpClient, EthernetSSLClient  * ethernet_client);
-//TableClient(CloudStorageAccount *account, const char * caCert, EthernetHttpClient *httpClient, EthernetSSLClient  * ethernet_client);
-//TableClient(CloudStorageAccount *account, const char * caCert, EthernetHttpClient *httpClient);
-
-//TableClient(CloudStorageAccount *account,  br_x509_trust_anchor * tAs, size_t num, EthernetClient * ethernet_client); // EthernetSSLClient * ethernet_client);
 TableClient(CloudStorageAccount *account, Protocol protocol, br_x509_trust_anchor tAs, size_t numTA, EthernetClient * ethernet_client, EthernetSSLClient * ethernetSslClient, EthernetHttpClient * ethernetHttpClient);
-//TableClient(CloudStorageAccount *account, Protocol protocol, br_x509_trust_anchor tAs, size_t numTA, EthernetClient&  ethernet_client);
-//Protocol protocol,
-// SysTime * systime
-//friend void sslClient 
-//extern void EthernetSSLClient 
+
 /*
 #if (USE_ENC28_ETHERNET == 1)
     

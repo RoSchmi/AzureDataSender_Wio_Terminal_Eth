@@ -1,6 +1,5 @@
 
 
-
 // Application AzureDataSender_Wio_Terminal_Eth 
 // Copyright RoSchmi 2020, 2021. License Apache 2.0
 
@@ -57,8 +56,6 @@
 #include "EthernetENC.h"
 #include "EthernetHttpClient_SSL.h"
 
-
-//#include "EthernetWebServer_SSL.h"
 #include "functional-vlpp.h"
 
 #include "SAMCrashMonitor.h"
@@ -212,10 +209,6 @@ static SysTime sysTime;
 
 Rs_time_helpers time_helpers;
 
-typedef const char* X509Certificate;
-
-X509Certificate myX509Certificate = baltimore_root_ca;
-
 // Set transport protocol as defined in config.h
 static bool UseHttps_State = TRANSPORT_PROTOCOL == 0 ? false : true;
 
@@ -286,9 +279,9 @@ String floToStr(float value);
 float ReadAnalogSensor(int pSensorIndex);
 DateTime actualizeSysTimeFromNtp();
 void createSampleTime(DateTime dateTimeUTCNow, int timeZoneOffsetUTC, char * sampleTime);
-az_http_status_code  createTable(CloudStorageAccount * myCloudStorageAccountPtr, X509Certificate myX509Certificate, const char * tableName);
+az_http_status_code  createTable(CloudStorageAccount * myCloudStorageAccountPtr, const char * tableName);
 az_http_status_code CreateTable( const char * tableName, ContType pContentType, AcceptType pAcceptType, ResponseType pResponseType, bool);
-az_http_status_code insertTableEntity(CloudStorageAccount *myCloudStorageAccountPtr, X509Certificate pCaCert, const char * pTableName, TableEntity pTableEntity, char * outInsertETag);
+az_http_status_code insertTableEntity(CloudStorageAccount *myCloudStorageAccountPtr, const char * pTableName, TableEntity pTableEntity, char * outInsertETag);
 void makePartitionKey(const char * partitionKeyprefix, bool augmentWithYear, DateTime dateTime, az_span outSpan, size_t *outSpanLength);
 void makeRowKey(DateTime actDate, az_span outSpan, size_t *outSpanLength);
 void showDisplayFrame();
@@ -367,13 +360,6 @@ void setup()
   // buffer to hold messages for display
   char buf[100];
   
-  #if USE_ENC28_ETHERNET == 0
-  sprintf(buf, "RTL8720 Firmware: %s", rpc_system_version());
-  lcd_log_line(buf);
-  sprintf(buf, "Initial WiFi-Status: %i", (int)WiFi.status());
-  lcd_log_line(buf);
-  #endif
-  
   // Setting Daylightsavingtime. Enter values for your zone in file include/config.h
   // Program aborts in some cases of invalid values
   bool firstTimeZoneDef_is_Valid = true;
@@ -413,95 +399,9 @@ void setup()
 delay(500);
   
 
-#if USE_ENC28_ETHERNET == 0
-  //Set WiFi to station mode and disconnect from an AP if it was previously connected
-  
-  WiFi.mode(WIFI_STA);
-  lcd_log_line((char *)"First disconnecting.");
-  while (WiFi.status() != WL_DISCONNECTED)
-  {
-    WiFi.disconnect();
-    delay(200); 
-  }
-  
-  sprintf(buf, "Status: %i", (int)WiFi.status());
-  lcd_log_line(buf);
-  
-  delay(500);
-
-  sprintf(buf, "Connecting to SSID: %s", ssid);
-  lcd_log_line(buf);
-
-  if (!ssid || *ssid == 0x00 || strlen(ssid) > 31)
-  {
-    lcd_log_line((char *)"Invalid: SSID or PWD, Stop");
-    // Stay in endless loop
-      while (true)
-      {         
-        delay(1000);
-      }
-  }
-
-  #if USE_WIFI_STATIC_IP == 1
-    IPAddress presetIp(192, 168, 1, 83);
-    IPAddress presetGateWay(192, 168, 1, 1);
-    IPAddress presetSubnet(255, 255, 255, 0);
-    IPAddress presetDnsServer1(8,8,8,8);
-    IPAddress presetDnsServer2(8,8,4,4);
-  #endif
-
-WiFi.begin(ssid, password);
- 
-if (!WiFi.enableSTA(true))
-{
-
-  #if WORK_WITH_WATCHDOG == 1   
-    __unused int timeout = SAMCrashMonitor::enableWatchdog(4000);
-    sprintf(buf, "Watchdog enabled: %i %s", timeout, "ms");
-    lcd_log_line(buf);
-  #endif
-
-  while (true)
-  {
-    // Stay in endless loop to reboot through Watchdog
-    lcd_log_line((char *)"Connect failed.");
-    delay(1000);
-    }
-}
-
-//#if USE_ENC28_ETHERNET == 0
-  if (!WiFi.config(presetIp, presetGateWay, presetSubnet, presetDnsServer1, presetDnsServer2))
-  {
-    while (true)
-    {
-      // Stay in endless loop
-    lcd_log_line((char *)"WiFi-Config failed");
-      delay(3000);
-    }
-  }
-  else
-  {
-    lcd_log_line((char *)"WiFi-Config successful");
-    delay(1000);
-  }
-  
-  while (WiFi.status() != WL_CONNECTED)
-  {  
-    delay(1000);
-    lcd_log_line(itoa((int)WiFi.status(), buf, 10));
-    WiFi.begin(ssid, password);
-  }
-
-  lcd_log_line((char *)"Connected, new Status:");
-  lcd_log_line(itoa((int)WiFi.status(), buf, 10));
+#if USE_ETHERNET_WRAPPER
+  EthernetInit();
 #endif
-
-#if USE_ENC28_ETHERNET == 1
-    #if USE_ETHERNET_WRAPPER
-
-      EthernetInit();
-
-    #endif
 
   #if WORK_WITH_WATCHDOG == 1   
     __unused int timeout = SAMCrashMonitor::enableWatchdog(4000);
@@ -510,6 +410,8 @@ if (!WiFi.enableSTA(true))
   #endif
 
   uint8_t mac[6] = {0x74,0x69,0x69,0x2D,0x30,0x31};
+  // Use Static IP
+  //Ethernet.begin(mac, ip);
   if (Ethernet.begin(mac) != 1) 
   {
     Serial.println("Failed to configure Ethernet using DHCP");
@@ -518,22 +420,12 @@ if (!WiFi.enableSTA(true))
       delay(1); // do nothing, no point running without Ethernet hardware
     }
   }
-#endif
- 
-  #if USE_ENC28_ETHERNET == 0
-  IPAddress localIpAddress = WiFi.localIP();
-  IPAddress gatewayIp =  WiFi.gatewayIP();
-  IPAddress subNetMask =  WiFi.subnetMask();
-  IPAddress dnsServerIp = WiFi.dnsIP();
-  #endif
 
-  #if USE_ENC28_ETHERNET == 1
   IPAddress localIpAddress = Ethernet.localIP();
   IPAddress gatewayIp =  Ethernet.gatewayIP();
   IPAddress subNetMask =  Ethernet.subnetMask();
   IPAddress dnsServerIp = Ethernet.dnsServerIP();
-  #endif
-
+  
   Serial.print("My IP: ");
   Serial.println(Ethernet.localIP());
   Serial.print("Netmask: ");
@@ -639,7 +531,7 @@ if (!WiFi.enableSTA(true))
 
   // Clear screen
   current_text_line = 0;
-  //tft.fillScreen(screenColor);
+  tft.fillScreen(screenColor);
   
   dateTimeUTCNow = sysTime.getTime();
   time_helpers.update(dateTimeUTCNow);
@@ -663,16 +555,14 @@ if (!WiFi.enableSTA(true))
 
 void loop() 
 { 
-  
-  
   if (loopCounter++ % 1000 == 0)   // Make decisions to send data every 1000 th round and toggle Led to signal that App is running
   {
     
-    Ethernet.maintain();  // Needed for EthernetENC library
+    Ethernet.maintain();  // Needed for proper operation of EthernetENC library
 
     uint32_t currentMillis = millis();
     ledState = !ledState;
-    digitalWrite(LED_BUILTIN, ledState);
+    digitalWrite(LED_BUILTIN, ledState);    // toggle LED to signal that App is running
 
     #if WORK_WITH_WATCHDOG == 1
       SAMCrashMonitor::iAmAlive();
@@ -772,7 +662,7 @@ void loop()
           // Create table if table doesn't exist
           if (localTime.year() != dataContainer.Year)
           {
-            az_http_status_code theResult = createTable(myCloudStorageAccountPtr, myX509Certificate, (char *)augmentedAnalogTableName.c_str());
+            az_http_status_code theResult = createTable(myCloudStorageAccountPtr, (char *)augmentedAnalogTableName.c_str());
                  
             if ((theResult == AZ_HTTP_STATUS_CODE_CONFLICT) || (theResult == AZ_HTTP_STATUS_CODE_CREATED))
             {
@@ -825,7 +715,7 @@ void loop()
 
 
           // Store Entity to Azure Cloud   
-         __unused az_http_status_code insertResult =  insertTableEntity(myCloudStorageAccountPtr, myX509Certificate, (char *)augmentedAnalogTableName.c_str(), analogTableEntity, (char *)EtagBuffer);
+         __unused az_http_status_code insertResult =  insertTableEntity(myCloudStorageAccountPtr, (char *)augmentedAnalogTableName.c_str(), analogTableEntity, (char *)EtagBuffer);
 
         }
         else     // Task to do was not NTP and not send analog table, so it is Send On/Off values or End of day stuff?
@@ -872,7 +762,7 @@ void loop()
               // Create table if table doesn't exist
               if (localTime.year() != onOffValueSet.OnOffSampleValues[i].Year)
               {
-                 az_http_status_code theResult = createTable(myCloudStorageAccountPtr, myX509Certificate, (char *)augmentedOnOffTableName.c_str());
+                 az_http_status_code theResult = createTable(myCloudStorageAccountPtr, (char *)augmentedOnOffTableName.c_str());
                  
                  if ((theResult == AZ_HTTP_STATUS_CODE_CONFLICT) || (theResult == AZ_HTTP_STATUS_CODE_CREATED))
                  {
@@ -911,7 +801,7 @@ void loop()
               onOffValueSet.OnOffSampleValues[i].insertCounter++;
               
               // Store Entity to Azure Cloud   
-              __unused az_http_status_code insertResult =  insertTableEntity(myCloudStorageAccountPtr, myX509Certificate, (char *)augmentedOnOffTableName.c_str(), onOffTableEntity, (char *)EtagBuffer);
+              __unused az_http_status_code insertResult =  insertTableEntity(myCloudStorageAccountPtr, (char *)augmentedOnOffTableName.c_str(), onOffTableEntity, (char *)EtagBuffer);
               
               delay(1000);     // wait at least 1 sec so that two uploads cannot have the same RowKey
               break;          // Send only one in each round of loop 
@@ -1467,32 +1357,16 @@ void makePartitionKey(const char * partitionKeyprefix, bool augmentWithYear, Dat
 }
 
 
-az_http_status_code insertTableEntity(CloudStorageAccount *pAccountPtr, X509Certificate pCaCert, const char * pTableName, TableEntity pTableEntity, char * outInsertETag)
+az_http_status_code insertTableEntity(CloudStorageAccount *pAccountPtr, const char * pTableName, TableEntity pTableEntity, char * outInsertETag)
 {
-  
-#if USE_ENC28_ETHERNET == 1   
   static EthernetClient  client;
   #if TRANSPORT_PROTOCOL == 1
-    EthernetSSLClient sslClient(client, TAs, (size_t)TAs_NUM, 1, EthernetSSLClient::SSL_DUMP);
+    //EthernetSSLClient sslClient(client, TAs, (size_t)TAs_NUM, 1, EthernetSSLClient::SSL_DUMP);   // Define Log Level
+    EthernetSSLClient sslClient(client, TAs, (size_t)TAs_NUM);
     EthernetHttpClient  httpClient(sslClient, pAccountPtr->HostNameTable, (TRANSPORT_PROTOCOL == 0) ? 80 : 443);
   #else
     EthernetHttpClient  httpClient(client, pAccountPtr->HostNameTable, (TRANSPORT_PROTOCOL == 0) ? 80 : 443);
   #endif
-#else
-  #if TRANSPORT_PROTOCOL == 1
-      static WiFiClientSecure wifi_client;
-  #else
-      static WiFiClient wifi_client;
-  #endif
-#endif
-    
-#if USE_ENC28_ETHERNET == 0
-  #if TRANSPORT_PROTOCOL == 1  
-    wifi_client.setCACert(myX509Certificate);
-    //wifi_client.setCACert(baltimore_corrupt_root_ca);
-  #endif
-#endif
-  
 
   /*
   // For tests: Try second upload with corrupted certificate to provoke failure
@@ -1507,8 +1381,6 @@ az_http_status_code insertTableEntity(CloudStorageAccount *pAccountPtr, X509Cert
 
   TableClient table(pAccountPtr, (TRANSPORT_PROTOCOL == 0) ? Protocol::useHttp : Protocol::useHttps, TAs[(size_t)TAs_NUM], (size_t)TAs_NUM, &client, &sslClient, &httpClient);
 
-  
-  
   #if WORK_WITH_WATCHDOG == 1
       SAMCrashMonitor::iAmAlive();
   #endif
@@ -1516,7 +1388,7 @@ az_http_status_code insertTableEntity(CloudStorageAccount *pAccountPtr, X509Cert
   DateTime responseHeaderDateTime = DateTime();   // Will be filled with DateTime value of the resonse from Azure Service
 
   // Insert Entity
-  az_http_status_code statusCode = table.InsertTableEntity(pTableName, pTableEntity, (char *)outInsertETag, &responseHeaderDateTime, contApplicationIatomIxml, acceptApplicationIjson, ResponseType::dont_returnContent, false);
+  az_http_status_code statusCode = table.InsertTableEntity(pTableName, pTableEntity, (char *)outInsertETag, &responseHeaderDateTime, ContType::contApplicationIatomIxml, AcceptType::acceptApplicationIjson, ResponseType::dont_returnContent, false);
   
   #if WORK_WITH_WATCHDOG == 1
       SAMCrashMonitor::iAmAlive();
@@ -1537,7 +1409,6 @@ az_http_status_code insertTableEntity(CloudStorageAccount *pAccountPtr, X509Cert
       sprintf(codeString, "%s %i", "Entity inserted: ", az_http_status_code(statusCode));
       lcd_log_line((char *)codeString);
     }
-    
     
     #if UPDATE_TIME_FROM_AZURE_RESPONSE == 1    // System time shall be updated from the DateTime value of the response ?
     
@@ -1604,58 +1475,27 @@ az_http_status_code insertTableEntity(CloudStorageAccount *pAccountPtr, X509Cert
 }
 
 
-az_http_status_code createTable(CloudStorageAccount *pAccountPtr, X509Certificate pCaCert, const char * pTableName)
+az_http_status_code createTable(CloudStorageAccount *pAccountPtr, const char * pTableName)
 { 
-
-  #if USE_ENC28_ETHERNET == 1   
-    static EthernetClient  client;
-    
-    EthernetSSLClient sslClient(client, TAs, (size_t)TAs_NUM, 1, EthernetSSLClient::SSL_DUMP);
-    
-    char url[] = "prax47.table.core.windows.net";
-    EthernetHttpClient  httpClient(sslClient, url, 443);
-    //httpClient.connectionKeepAlive();
-    //httpClient.noDefaultRequestHeaders(); 
-    //volatile int connectResult = httpClient.connect((char *)url, 443);
-
-    //volatile int dummy34 = 1;
-    
-       
-  #else
-    #if TRANSPORT_PROTOCOL == 1
-      static WiFiClientSecure wifi_client;
-    #else
-      static WiFiClient wifi_client;
-    #endif
-  #endif
- 
+  static EthernetClient  client;
   #if TRANSPORT_PROTOCOL == 1
-    #if USE_ENC28_ETHERNET == 0
-     wifi_client.setCACert(myX509Certificate);
-    //wifi_client.setCACert(baltimore_corrupt_root_ca);
-    #endif
+    //EthernetSSLClient sslClient(client, TAs, (size_t)TAs_NUM, 1, EthernetSSLClient::SSL_DUMP);   // Define Log Level
+    EthernetSSLClient sslClient(client, TAs, (size_t)TAs_NUM);
+    EthernetHttpClient  httpClient(sslClient, pAccountPtr->HostNameTable, (TRANSPORT_PROTOCOL == 0) ? 80 : 443);
+  #else
+    EthernetHttpClient  httpClient(client, pAccountPtr->HostNameTable, (TRANSPORT_PROTOCOL == 0) ? 80 : 443);
   #endif
 
   #if WORK_WITH_WATCHDOG == 1
       SAMCrashMonitor::iAmAlive();
   #endif
   
-  #if USE_ENC28_ETHERNET == 0
-    TableClient table(pAccountPtr, pCaCert,  httpPtr, &wifi_client, &sslClient);
-    #else  
-    //TableClient table(pAccountPtr, pCaCert,  httpPtr, &sslClient);
-    //TableClient table(pAccountPtr, TAs, (size_t)TAs_NUM, &client);
-    //TableClient table(pAccountPtr, TAs[(size_t)TAs_NUM], (size_t)TAs_NUM, &client);
-    TableClient table(pAccountPtr, Protocol::useHttps, TAs[(size_t)TAs_NUM], (size_t)TAs_NUM, &client, &sslClient, &httpClient);
-    //TableClient table(pAccountPtr, Protocol::useHttps, TAs[(size_t)TAs_NUM], (size_t)TAs_NUM, client);
-
-    #endif
+  TableClient table(pAccountPtr, Protocol::useHttps, TAs[(size_t)TAs_NUM], (size_t)TAs_NUM, &client, &sslClient, &httpClient);
+  
+  // Create Table
+  az_http_status_code statusCode = table.CreateTable(pTableName, ContType::contApplicationIatomIxml, AcceptType::acceptApplicationIjson, ResponseType::dont_returnContent, false);
 
   
-  //TableClient table(pAccountPtr, pCaCert,  httpPtr, &wifi_client);
-
-  // Create Table
-  az_http_status_code statusCode = table.CreateTable(pTableName, contApplicationIatomIxml, acceptApplicationIjson, dont_returnContent, false);
   
    // RoSchmi for tests: to simulate failed upload
    //az_http_status_code   statusCode = AZ_HTTP_STATUS_CODE_UNAUTHORIZED;

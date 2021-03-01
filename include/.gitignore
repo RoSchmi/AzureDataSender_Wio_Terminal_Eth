@@ -9,6 +9,8 @@
 !Free_Fonts.h
 !config_secret_template.h
 !config.h
+!defines.h
+!trust_anchors.h
 !README
 
 
