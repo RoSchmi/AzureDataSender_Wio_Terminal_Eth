@@ -2,19 +2,6 @@
 #include "AzureStorage/TableClient.h"
 #include "EthernetHttpClient_SSL.h"
 #include "TableClient.h"
-//#include "config.h"
-
-//WiFiClient * _wifiClient;
-//EthernetSSLClient * _ethernetClient;
-//static EthernetSSLClient * _ethernetClient = NULL;
-/*
-EthernetClient * _ethernetClient = NULL; 
-CloudStorageAccount  * _accountPtr;
-br_x509_trust_anchor _tAs;
-size_t _numTAs = 0;
-bool _useHttps = true;
-*/
-//EthernetClient& _ethernetClient;
 
 EthernetClient * _ethernetClient;
 EthernetSSLClient * _ethernetSslClient;
@@ -23,12 +10,6 @@ CloudStorageAccount  * _accountPtr;
 br_x509_trust_anchor _tAs;
 size_t _numTAs = 0;
 bool _useHttps = true;
-
-
-
-//HTTPClient * _httpPtr;
-//HttpClient * _httpPtr;
-//EthernetHttpClient * _httpPtr;
 
 const char * _caCert;
 
@@ -139,15 +120,7 @@ void TableClient::CreateTableAuthorizationHeader(const char * content, const cha
 
 
 // Constructor
-
-//#if USE_ENC28_ETHERNET == 1
-//TableClient::TableClient(CloudStorageAccount * account, const char * caCert, EthernetHttpClient * httpClient, EthernetSSLClient * ethernet_Client)
-//TableClient::TableClient(CloudStorageAccount * account,  br_x509_trust_anchor * tAs, size_t num, EthernetClient * ethernet_Client) //  EthernetSSLClient * ethernet_Client)
-//protocol,
-
-//TableClient::TableClient(CloudStorageAccount *account, br_x509_trust_anchor * tAs, size_t numTA, EthernetClient * ethernet_client)
 TableClient::TableClient(CloudStorageAccount *account, Protocol protocol, br_x509_trust_anchor tAs, size_t numTA, EthernetClient * ethernet_client, EthernetSSLClient * ethernetSslClient, EthernetHttpClient * ethernetHttpClient)
-//TableClient::TableClient(CloudStorageAccount *account, Protocol protocol, br_x509_trust_anchor tAs, size_t numTA, EthernetClient& ethernet_client)
 {
     _accountPtr = account;
     _numTAs = numTA;
@@ -156,25 +129,10 @@ TableClient::TableClient(CloudStorageAccount *account, Protocol protocol, br_x50
     _ethernetClient = ethernet_client;
     _ethernetSslClient = ethernetSslClient;
     _ethernetHttpClient = ethernetHttpClient;
-
-
-
 }
-//#else
-/*
-TableClient::TableClient(CloudStorageAccount * account, const char * caCert, HTTPClient * httpClient, WiFiClient * wifiClient)
-{
-    _accountPtr = account;
-    _caCert = caCert;
-    _httpPtr = httpClient;
-    _wifiClient = wifiClient; 
-}
-*/
-//#endif
 
 TableClient::~TableClient()
 {};
-
 
 az_http_status_code TableClient::CreateTable(const char * tableName, ContType pContentType, 
 AcceptType pAcceptType, ResponseType pResponseType, bool useSharedKeyLite)

@@ -18,13 +18,11 @@
 #include "EthernetHttpClient_SSL.h"
 #include "Ethernet_HTTPClient/Ethernet_HttpClient.h"
 
-EthernetClient * inClient = NULL;
 EthernetHttpClient * httpClient = NULL;
-EthernetSSLClient *inSSLClient = NULL;
-
-
-br_x509_trust_anchor reqTrustAnchors;
-size_t reqNumTAs = 0;
+//EthernetClient * inClient = NULL;
+//EthernetSSLClient *inSSLClient = NULL;
+//br_x509_trust_anchor reqTrustAnchors;
+//size_t reqNumTAs = 0;
 
 const char * PROGMEM mess1 = "-1 Connection refused\r\n\0";
 const char * PROGMEM mess2 = "-2 Send Header failed\r\n\0";
@@ -115,56 +113,27 @@ az_http_client_send_request(az_http_request const* request, az_http_response* re
 
   uint16_t port = (strcmp(protocol, (const char *)"http") == 0) ? 80 : 443;
 
-EthernetClient reqClient;
-EthernetClient * ptr = &reqClient;
-ptr = inClient;
-
-static EthernetSSLClient sslClient(reqClient, &reqTrustAnchors, (size_t)reqNumTAs, 1, EthernetSSLClient::SSL_DUMP);
-
-
-
-
-
-
-
-//EthernetHttpClient httpClient(reqClient, (char *)host.c_str(), port);
-
-
-
-//static EthernetHttpClient httpClient(sslClient, (char *)host.c_str(), port);
-
-
-
-/*
-if (port != 80)
-{
-
-  EthernetHttpClient httpsClient(sslClient, (char *)host.c_str(), port);
-  httpClient = httpsClient;
-}
-*/
+  //EthernetClient reqClient;
+  //EthernetClient * ptr = &reqClient;
+  //ptr = inClient;
 
   httpClient->connectionKeepAlive();
   httpClient->noDefaultRequestHeaders();
   
-  //volatile int connectResult = httpClient.connect((char *)host.c_str(), port);
-
   
+  // Try 3 times to connect
   for (int i = 0; i < 3; i++)
   {
      if (httpClient->connect((char *)host.c_str(), port))
-     { 
-       volatile int dummy23 = 1;
+     {      
        break; 
      }
      else
-     { 
-       volatile int dummy24 = 1;
+     {       
        delay(200); 
      }
   }
   
-
   if (httpClient->connected())
   {
     httpClient->beginRequest();
@@ -190,62 +159,36 @@ if (port != 80)
       httpClient->sendHeader(nameString, valueString);   
     }
 
-    //httpClient.sendHeader((char *)"Host", (char *)host.c_str());
-  
     httpClient->beginBody();
   
 
-    //devHttp->endRequest();
-
-    // int32_t bodySize = request->_internal.body._internal.size;
-
-    //char * theBody = (char *)request->_internal.body._internal.ptr;
-
-    // Printout the body
-    int32_t maxSliceLength = 50;
-    int32_t currIndex = 0;
-
     // RoSchmi
+    // Printout the body (in one batch)
     char buffer[900] {0};
     az_span_to_str(buffer, 899, request->_internal.body);
-    
-
-
-
-
-    //char * bufPtr = buf;
-    //bufPtr = (char *)request->_internal.body._internal.ptr;
-    //char theOutput[] = "Roland";
-
     httpClient->print((char *)buffer);
-    //httpClient.print("\r\n");
-  
-
-    //Serial.print((char *)theOutput);
-
+    
+    // Printout the body (alternative in chunks)
     /*
+    int32_t maxSliceLength = 50;
+    int32_t currIndex = 0;
+    int32_t charsToPrint = 0;
     if (request->_internal.body._internal.size > 0)
     {
-      char buf[maxSliceLength] {0};
-      volatile int32_t bodySize = request->_internal.body._internal.size;
-      while (( bodySize - currIndex) > maxSliceLength)
-      {
-        az_span slice = az_span_slice(request->_internal.body, currIndex, currIndex + maxSliceLength);
-        currIndex = currIndex + maxSliceLength; 
-        memcpy(buf, slice._internal.ptr, maxSliceLength);
-        httpClient.print(buf);
-      }
-      az_span slice = az_span_slice_to_end(request->_internal.body, currIndex);   
-      volatile int32_t sliceLength = bodySize - currIndex;
-      char endBuf[sliceLength] {0};
-      memcpy(endBuf, slice._internal.ptr, sliceLength);
-      httpClient.print(endBuf);
-     
+      int32_t bodySize = request->_internal.body._internal.size;
+      charsToPrint = bodySize - currIndex > maxSliceLength ? maxSliceLength : bodySize - currIndex;
+      while (charsToPrint > 0)
+      {        
+        az_span slice = az_span_slice(request->_internal.body, currIndex, currIndex + charsToPrint);    
+        currIndex = currIndex + charsToPrint;   
+        char buf[maxSliceLength + 1] {0};
+        memcpy(buf, slice._internal.ptr, charsToPrint);
+        charsToPrint = bodySize - currIndex > maxSliceLength ? maxSliceLength : bodySize - currIndex;
+        httpClient->print((char *)buf);      
+      } 
     }
     */
-  
-    //httpClient.print(bodyString); 
-
+    
     if (az_span_is_content_equal(requMethod, AZ_SPAN_LITERAL_FROM_STR("POST")))
     {       
       const char * headerKeys[] = {"ETag", "Date", "x-ms-request-id", "x-ms-version", "Content-Type"};
@@ -449,38 +392,18 @@ void setHttpClient(EthernetHttpClient * httpClient)
 
 void initializeRequest(EthernetClient * pReqClient, EthernetHttpClient * pEthernetHttpClient, br_x509_trust_anchor pTAs, size_t pNumTAs)
 {
-  inClient = pReqClient;
+  //inClient = pReqClient;
   httpClient = pEthernetHttpClient;
-  reqTrustAnchors = pTAs;
-  reqNumTAs = pNumTAs;
+  //reqTrustAnchors = pTAs;
+  //reqNumTAs = pNumTAs;
 }
 
-/*
-void initializeRequest(EthernetClient& pReqClient, br_x509_trust_anchor pTAs, size_t pNumTAs)
-{
-  reqClient = pReqClient;
-  reqTrustAnchors = pTAs;
-  reqNumTAs = pNumTAs;
-}
-*/
 
 void setHttpClient(EthernetHttpClient * pEthernetHttpClient)
 {
     httpClient = pEthernetHttpClient;
 }
 
-/*
-void setDevClient(EthernetSSLClient * pDevClient)
-{
-    devClient = pDevClient;
-}
-
-
-void setCaCert(const char * caCert)
-{
-  _caCertificate = caCert;
-}
-*/
 
 /**
  * @brief loop all the headers from a HTTP request and combine all headers into one az_span
