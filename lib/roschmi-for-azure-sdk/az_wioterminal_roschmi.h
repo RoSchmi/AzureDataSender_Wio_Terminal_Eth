@@ -28,13 +28,7 @@
 #define MAX_HEADERNAME_LENGTH 30
 #define MAX_HEADERVALUE_LENGTH 120
 
-//void setHttpClient(EthernetHttpClient * httpClient);
 
-void setCaCert(const char * caCert);
-
-// RoSchm
-//void setWiFiClient(WiFiClient * wifiClient);
-void setDevClient(EthernetSSLClient * devClient);
 
 // RoSchmi
 //static az_result dev_az_http_client_build_headers(
@@ -49,9 +43,6 @@ az_span writable_buffer,
 az_span header_name,
 az_span header_value,
 az_span separator);
-
-
-//static EthernetSSLClient * devClient = NULL;
 
 #include "az_wioterminal_roschmi_Impl.h"
     

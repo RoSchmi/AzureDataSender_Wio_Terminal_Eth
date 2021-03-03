@@ -256,11 +256,8 @@ AcceptType pAcceptType, ResponseType pResponseType, bool useSharedKeyLite)
   apiOptions._internal.option_location = _az_http_policy_apiversion_option_location_header;
   
 
-   initializeRequest(_ethernetClient, _ethernetHttpClient, _tAs, _numTAs);
-  //setHttpClient(_httpPtr);
-  //setCaCert(_caCert);
-  //setWiFiClient(_wifiClient);
-  //setDevClient(_ethernetClient);
+  initializeRequest(_ethernetClient, _ethernetHttpClient, _tAs, _numTAs);
+  
 
   __unused az_result table_create_result =  az_storage_tables_upload(&tabClient, content_to_upload, az_span_create_from_str(md5Buffer), az_span_create_from_str((char *)authorizationHeaderBuffer), 
       az_span_create_from_str((char *)x_ms_timestamp), &uploadOptions, &http_response);
@@ -431,13 +428,9 @@ AcceptType pAcceptType, ResponseType pResponseType, bool useSharedKeyLite)
   uploadOptions._internal.contentType = contentTypeAzSpan;
   uploadOptions._internal.perferType = responseTypeAzSpan;
 
-  //set HTTPClient and certificate
+  
   initializeRequest(_ethernetClient, _ethernetHttpClient, _tAs, _numTAs);
-  //setHttpClient(_httpPtr);
-  //setCaCert(_caCert);
-  //setWiFiClient(_wifiClient);
-  //setDevClient(_ethernetClient);
-  //static EthernetHttpClient http(sslClient, (const char *)"Dummy", 443);
+  
 
   __unused az_result const entity_upload_result = 
     az_storage_tables_upload(&tabClient, content_to_upload, az_span_create_from_str(md5Buffer), az_span_create_from_str((char *)authorizationHeaderBuffer), az_span_create_from_str((char *)x_ms_timestamp), &uploadOptions, &http_response);

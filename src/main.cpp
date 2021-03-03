@@ -3,9 +3,23 @@
 // Application AzureDataSender_Wio_Terminal_Eth 
 // Copyright RoSchmi 2020, 2021. License Apache 2.0
 
-// Set Azure credentials in file include/config_secret.h  (take config_secret_template.h as template)
-// Settings like sendinterval, timezone, daylightsavingstime settings, transport protocol, 
-// tablenames and so on are to be defined in /include/config.h
+// Special files in folder include/:
+// defines.h:
+//     Defines settings which adapt Eternet- and SSL-libraries to Wio Terminal
+
+// trust_anchors.h:
+//     Holds Certificates to be used in SSL-libraries
+
+// config.h
+//     Contains settings like sendinterval, timezone, daylightsavingstime settings, transport protocol, 
+//      tablenames and so on
+
+// config_secret.h
+//      Contains credentials of used Azure Storage Account
+//      This file should be excluded from transfer to GitHub through the .gitignore file in folder include/
+
+// config_secret_template.h
+//      This file is a template for config_secret.h
 
 
   // I started to make this App with the Azure Storage Blob Example as a template, see: 
@@ -36,7 +50,7 @@
 
 
 #include <Arduino.h>
-// RoSchmi
+
 // Needed for Ethernet
 #include "defines.h"
 
@@ -403,13 +417,18 @@ delay(500);
   EthernetInit();
 #endif
 
-  #if WORK_WITH_WATCHDOG == 1   
-    __unused int timeout = SAMCrashMonitor::enableWatchdog(4000);
-    sprintf(buf, "Watchdog enabled: %i %s", timeout, "ms");
+  #if WORK_WITH_WATCHDOG == 1
+    sprintf(buf, "Watchdog enabled: %i %s", 4000, "ms");
     lcd_log_line(buf);
+    __unused int timeout = SAMCrashMonitor::enableWatchdog(4000);  
   #endif
 
   uint8_t mac[6] = {0x74,0x69,0x69,0x2D,0x30,0x31};
+
+  #if WORK_WITH_WATCHDOG == 1
+      SAMCrashMonitor::iAmAlive();
+    #endif
+
   // Use Static IP
   //Ethernet.begin(mac, ip);
   if (Ethernet.begin(mac) != 1) 
@@ -420,12 +439,16 @@ delay(500);
       delay(1); // do nothing, no point running without Ethernet hardware
     }
   }
+  #if WORK_WITH_WATCHDOG == 1
+      SAMCrashMonitor::iAmAlive();
+    #endif
 
   IPAddress localIpAddress = Ethernet.localIP();
   IPAddress gatewayIp =  Ethernet.gatewayIP();
   IPAddress subNetMask =  Ethernet.subnetMask();
   IPAddress dnsServerIp = Ethernet.dnsServerIP();
   
+  /*
   Serial.print("My IP: ");
   Serial.println(Ethernet.localIP());
   Serial.print("Netmask: ");
@@ -434,8 +457,9 @@ delay(500);
   Serial.println(Ethernet.gatewayIP());
   Serial.print("DNS: ");
   Serial.println(Ethernet.dnsServerIP());
+  */
 
-   
+
 // Wait for 1500 ms
   for (int i = 0; i < 4; i++)
   {
@@ -716,7 +740,7 @@ void loop()
 
           // Store Entity to Azure Cloud   
          __unused az_http_status_code insertResult =  insertTableEntity(myCloudStorageAccountPtr, (char *)augmentedAnalogTableName.c_str(), analogTableEntity, (char *)EtagBuffer);
-
+                  
         }
         else     // Task to do was not NTP and not send analog table, so it is Send On/Off values or End of day stuff?
         {
@@ -803,7 +827,8 @@ void loop()
               // Store Entity to Azure Cloud   
               __unused az_http_status_code insertResult =  insertTableEntity(myCloudStorageAccountPtr, (char *)augmentedOnOffTableName.c_str(), onOffTableEntity, (char *)EtagBuffer);
               
-              delay(1000);     // wait at least 1 sec so that two uploads cannot have the same RowKey
+              //delay(1000);     // wait at least 1 sec so that two uploads cannot have the same RowKey
+
               break;          // Send only one in each round of loop 
             }
             else
@@ -1360,9 +1385,11 @@ void makePartitionKey(const char * partitionKeyprefix, bool augmentWithYear, Dat
 az_http_status_code insertTableEntity(CloudStorageAccount *pAccountPtr, const char * pTableName, TableEntity pTableEntity, char * outInsertETag)
 {
   static EthernetClient  client;
+  //static EthernetSSLClient sslClient(client, TAs, (size_t)TAs_NUM, 1, EthernetSSLClient::SSL_DUMP);   // Define Log Level
+  static EthernetSSLClient sslClient(client, TAs, (size_t)TAs_NUM);
+
   #if TRANSPORT_PROTOCOL == 1
-    //EthernetSSLClient sslClient(client, TAs, (size_t)TAs_NUM, 1, EthernetSSLClient::SSL_DUMP);   // Define Log Level
-    EthernetSSLClient sslClient(client, TAs, (size_t)TAs_NUM);
+    
     EthernetHttpClient  httpClient(sslClient, pAccountPtr->HostNameTable, (TRANSPORT_PROTOCOL == 0) ? 80 : 443);
   #else
     EthernetHttpClient  httpClient(client, pAccountPtr->HostNameTable, (TRANSPORT_PROTOCOL == 0) ? 80 : 443);
@@ -1388,7 +1415,7 @@ az_http_status_code insertTableEntity(CloudStorageAccount *pAccountPtr, const ch
   DateTime responseHeaderDateTime = DateTime();   // Will be filled with DateTime value of the resonse from Azure Service
 
   // Insert Entity
-  az_http_status_code statusCode = table.InsertTableEntity(pTableName, pTableEntity, (char *)outInsertETag, &responseHeaderDateTime, ContType::contApplicationIatomIxml, AcceptType::acceptApplicationIjson, ResponseType::returnContent, false);
+  az_http_status_code statusCode = table.InsertTableEntity(pTableName, pTableEntity, (char *)outInsertETag, &responseHeaderDateTime, ContType::contApplicationIatomIxml, AcceptType::acceptApplicationIjson, ResponseType::dont_returnContent, false);
   
   #if WORK_WITH_WATCHDOG == 1
       SAMCrashMonitor::iAmAlive();
@@ -1428,7 +1455,7 @@ az_http_status_code insertTableEntity(CloudStorageAccount *pAccountPtr, const ch
     #endif   
   }
   else            // request failed
-  {               // note: internal error codes from -1 to -11 were converted for tests to error codes 401 to 411 since
+  {               // note: internal error codes from -1 to -4 were converted for tests to error codes 401 to 404 since
                   // negative values cannot be returned as 'az_http_status_code' 
 
     failedUploadCounter++;
@@ -1446,13 +1473,6 @@ az_http_status_code insertTableEntity(CloudStorageAccount *pAccountPtr, const ch
 
         #if TRANSPORT_PROTOCOL == 1
           
-          // The outcommended code resets the WiFi module (did not solve problem)
-          //pinMode(RTL8720D_CHIP_PU, OUTPUT); 
-          //digitalWrite(RTL8720D_CHIP_PU, LOW); 
-          //delay(500); 
-          //digitalWrite(RTL8720D_CHIP_PU, HIGH);  
-          //delay(500);
-
           NVIC_SystemReset();     // Makes Code 64
         #endif
         #if TRANSPORT_PROTOCOL == 0     // for http requests reboot after the second, not the first, failed request
@@ -1478,9 +1498,9 @@ az_http_status_code insertTableEntity(CloudStorageAccount *pAccountPtr, const ch
 az_http_status_code createTable(CloudStorageAccount *pAccountPtr, const char * pTableName)
 { 
   static EthernetClient  client;
+  //static EthernetSSLClient sslClient(client, TAs, (size_t)TAs_NUM, 1, EthernetSSLClient::SSL_DUMP);   // Define Log Level
+  static EthernetSSLClient sslClient(client, TAs, (size_t)TAs_NUM);
   #if TRANSPORT_PROTOCOL == 1
-    //EthernetSSLClient sslClient(client, TAs, (size_t)TAs_NUM, 1, EthernetSSLClient::SSL_DUMP);   // Define Log Level
-    EthernetSSLClient sslClient(client, TAs, (size_t)TAs_NUM);
     EthernetHttpClient  httpClient(sslClient, pAccountPtr->HostNameTable, (TRANSPORT_PROTOCOL == 0) ? 80 : 443);
   #else
     EthernetHttpClient  httpClient(client, pAccountPtr->HostNameTable, (TRANSPORT_PROTOCOL == 0) ? 80 : 443);

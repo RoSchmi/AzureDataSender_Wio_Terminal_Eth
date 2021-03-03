@@ -22,7 +22,7 @@
 // The credentials of your WiFi router and the name and key of your
 // Azure Storage Account have to be set in the file config_secret.h 
 
-#define SENDINTERVAL_MINUTES  0.2            // Sendinterval in minutes, in this interval data are sent to the Cloud                                       
+#define SENDINTERVAL_MINUTES  1.0           // Sendinterval in minutes, in this interval data are sent to the Cloud                                       
                                               // is limited to be not below 1 second
 
 // Names for Tables in Azure Account, please obey rules for Azure Tablenames (e.g. no underscore allowed)
@@ -56,13 +56,14 @@
 #define NTP_UPDATE_INTERVAL_MINUTES 20   //  With this interval sytem time is updated via NTP
                                         //  with internet time (is limited to be not below 1 min)
 
-#define UPDATE_TIME_FROM_AZURE_RESPONSE 0  // 1 = yes, 0 = no. SystemTime is updated from the Post response from Azure.
+#define UPDATE_TIME_FROM_AZURE_RESPONSE 1  // 1 = yes, 0 = no. SystemTime is updated from the Post response from Azure.
                                            // With this option set, you can set  NTP_UPDATE_INTERVAL_MINUTES to a very
                                            // long time, so that it 'never' happens                                      
 
-#define ANALOG_SENSOR_READ_INTERVAL_SECONDS 2   // Analog sensors are read with this interval  (limited 1 to 14400)                                    
+#define ANALOG_SENSOR_READ_INTERVAL_SECONDS 1   // Analog sensors are read with this interval  (limited 1 to 14400)                                    
 
-#define WORK_WITH_WATCHDOG 0               // 1 = yes, 0 = no, Watchdog is used (1) or not used (0)
+#define WORK_WITH_WATCHDOG 0             // 1 = yes, 0 = no, Watchdog is used (1) or not used (0)
+                                          // Watchdog doesn't work with Ethernet
 
 #define REBOOT_AFTER_FAILED_UPLOAD 0         // 1 = yes, 0 = no, Because of possible bug in the App or the firmware the App doesn't recover
                                               // after a failed upload, so we should reboot (as long as the bug isn't solved)   
@@ -99,11 +100,11 @@
 #define MAGIC_NUMBER_INVALID 999.9      // Invalid values are replaced with this value (should be 999.9)
                                         // Not sure if it works with other values than 999.9
 
-#define SHOW_GRAPHIC_SCREEN 0          // 1 = A graphic screen with actual values is shown
+#define SHOW_GRAPHIC_SCREEN 1          // 1 = A graphic screen with actual values is shown
                                         // 0 = a log with actions is shown on the screen
 
-#define USE_SIMULATED_SENSORVALUES   // Activates simulated sensor values (sinus curve) or (test values)
-#define USE_TEST_VALUES              // Activates sending of test values (see Code in main.cpp)
+//#define USE_SIMULATED_SENSORVALUES   // Activates simulated sensor values (sinus curve) or (test values)
+//#define USE_TEST_VALUES              // Activates sending of test values (see Code in main.cpp)
                                        // if activated we select test values, not sinus curves
 
 #define SENSOR_1_OFFSET     0.0        // Calibration Offset to sensor No 1

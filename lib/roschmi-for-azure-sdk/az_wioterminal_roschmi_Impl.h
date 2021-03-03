@@ -19,8 +19,8 @@
 #include "Ethernet_HTTPClient/Ethernet_HttpClient.h"
 
 EthernetHttpClient * httpClient = NULL;
-//EthernetClient * inClient = NULL;
-//EthernetSSLClient *inSSLClient = NULL;
+EthernetClient * reqClient = NULL;
+EthernetSSLClient * reqSSLClient = NULL;
 //br_x509_trust_anchor reqTrustAnchors;
 //size_t reqNumTAs = 0;
 
@@ -60,6 +60,7 @@ az_http_client_send_request(az_http_request const* request, az_http_response* re
   size_t headerCount = az_http_request_headers_count(request);
 
   // Code to copy all headers into one string, actually not needed
+  // Was needed for debugging
   /*
   uint8_t headers_buffer[300] {0};
   az_span headers_span = AZ_SPAN_FROM_BUFFER(headers_buffer);
@@ -77,7 +78,7 @@ az_http_client_send_request(az_http_request const* request, az_http_response* re
   char protocol[6] {0};
   urlWorkCopy = request->_internal.url;
   
-  /* bool protocolIsHttpOrHttps = false; */
+  
   int32_t slashIndex = - 1;
   if (colonIndex != -1)
   {
@@ -200,12 +201,6 @@ az_http_client_send_request(az_http_request const* request, az_http_response* re
 
       httpCode = httpClient->responseStatusCode();
       
-      // Wait for all headers to be read
-      int32_t timeoutStart = millis();
-      while (!(httpClient->endOfHeadersReached()) && ( (millis() - timeoutStart) < 2000 ))
-      {
-        delay(20);
-      }
       
         
         char httpStatusLine[40] {0};
@@ -277,18 +272,13 @@ az_http_client_send_request(az_http_request const* request, az_http_response* re
           appendResult = az_http_response_append(ref_response, az_span_create_from_str((char *)messageBuffer));
         }
      
-      //volatile size_t responseBodySize = httpClient->contentLength();
+        // RoSchmi: For debugging
+        /*
+        char tempBuffer[700];
+        az_span content = AZ_SPAN_FROM_BUFFER(tempBuffer);
 
-       
-        // For debugging
-        
-        //char buffer[700];
-        az_span content = AZ_SPAN_FROM_BUFFER(buffer);
+        __unused az_http_response_get_body(ref_response, &content);
 
-        az_http_response_get_body(ref_response, &content);
-
-        //volatile int dummy349 = 1;
-        
         //  Here you can see the received payload in chunks 
         // if you set a breakpoint in the loop 
         
@@ -301,7 +291,7 @@ az_http_client_send_request(az_http_request const* request, az_http_response* re
           partMessage = payload.substring(indexCtr, indexCtr + pageWidth);
           indexCtr += pageWidth;
         }
-        
+        */
         
     }
     else
@@ -345,28 +335,26 @@ AZ_NODISCARD az_result az_platform_sleep_msec(int32_t milliseconds)
   delay(milliseconds);
   return AZ_OK;
 }
-//RoSchmi
-/*
-void setHttpClient(EthernetHttpClient * httpClient)
-{
-    devHttp = httpClient;
-}
-*/
+
+/**
+ * @brief initializes the code which performs the request with the initilized httpClient 
+ * reqClient: actually not used
+ * reqTrustAnchor: actually not used (is already part of httpClient)
+ * reqNumTAs: actually not used
+ * 
+ * @param pReqClient the Ethernet Client
+ * @param pEthernetHttpClient the Ethernet http Client (primed with Certificate)
+ * @param pTAs Trust Anchors
+ * @param pNumTAs Number of Trustanchors
+ */
 
 void initializeRequest(EthernetClient * pReqClient, EthernetHttpClient * pEthernetHttpClient, br_x509_trust_anchor pTAs, size_t pNumTAs)
 {
-  //inClient = pReqClient;
+  reqClient = pReqClient;
   httpClient = pEthernetHttpClient;
   //reqTrustAnchors = pTAs;
   //reqNumTAs = pNumTAs;
 }
-
-
-void setHttpClient(EthernetHttpClient * pEthernetHttpClient)
-{
-    httpClient = pEthernetHttpClient;
-}
-
 
 /**
  * @brief loop all the headers from a HTTP request and combine all headers into one az_span
@@ -377,6 +365,7 @@ void setHttpClient(EthernetHttpClient * pEthernetHttpClient)
  */
 
 /*
+// For debugging
 static AZ_NODISCARD az_result
 dev_az_http_client_build_headers(az_http_request const* request, az_span ref_headers)
 {
