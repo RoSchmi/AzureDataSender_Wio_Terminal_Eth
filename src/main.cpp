@@ -1388,7 +1388,7 @@ az_http_status_code insertTableEntity(CloudStorageAccount *pAccountPtr, const ch
   DateTime responseHeaderDateTime = DateTime();   // Will be filled with DateTime value of the resonse from Azure Service
 
   // Insert Entity
-  az_http_status_code statusCode = table.InsertTableEntity(pTableName, pTableEntity, (char *)outInsertETag, &responseHeaderDateTime, ContType::contApplicationIatomIxml, AcceptType::acceptApplicationIjson, ResponseType::dont_returnContent, false);
+  az_http_status_code statusCode = table.InsertTableEntity(pTableName, pTableEntity, (char *)outInsertETag, &responseHeaderDateTime, ContType::contApplicationIatomIxml, AcceptType::acceptApplicationIjson, ResponseType::returnContent, false);
   
   #if WORK_WITH_WATCHDOG == 1
       SAMCrashMonitor::iAmAlive();

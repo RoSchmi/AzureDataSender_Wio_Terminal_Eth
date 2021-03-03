@@ -444,7 +444,9 @@ AcceptType pAcceptType, ResponseType pResponseType, bool useSharedKeyLite)
     
     az_http_response_status_line statusLine;
 
-     __unused az_result result = az_http_response_get_status_line(&http_response, &statusLine);    
+     __unused az_result result = az_http_response_get_status_line(&http_response, &statusLine);
+     
+         
 
     az_span etagName = AZ_SPAN_FROM_STR("ETag");
     char keyBuf[20] {0};

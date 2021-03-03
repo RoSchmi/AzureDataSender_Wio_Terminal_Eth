@@ -168,7 +168,7 @@ az_http_client_send_request(az_http_request const* request, az_http_response* re
     az_span_to_str(buffer, 899, request->_internal.body);
     httpClient->print((char *)buffer);
     
-    // Printout the body (alternative in chunks)
+    // Printout the body (alternative using chunks to avoid allocating a large buffer)
     /*
     int32_t maxSliceLength = 50;
     int32_t currIndex = 0;
@@ -190,63 +190,55 @@ az_http_client_send_request(az_http_request const* request, az_http_response* re
     */
     
     if (az_span_is_content_equal(requMethod, AZ_SPAN_LITERAL_FROM_STR("POST")))
-    {       
-      const char * headerKeys[] = {"ETag", "Date", "x-ms-request-id", "x-ms-version", "Content-Type"};
-       
-      //devHttp->collectHeaders(headerKeys, 5);
-      
+    { 
+      const int targetHeadersCount = 5;     
+      const char headerKeys[targetHeadersCount][20] = {"ETag", "Date", "x-ms-request-id", "x-ms-version", "Content-Type"};
+
       volatile int httpCode = -1;
 
       httpClient->endRequest();
 
       httpCode = httpClient->responseStatusCode();
-
-      /*
-      uint32_t start = millis();
-      Ethernet.maintain();
-      while (millis() - start < 2)
-      {};
-      */
       
+      // Wait for all headers to be read
+      int32_t timeoutStart = millis();
+      while (!(httpClient->endOfHeadersReached()) && ( (millis() - timeoutStart) < 2000 ))
+      {
+        delay(20);
+      }
       
-      
-      //delay(1); 
         
-      //volatile size_t responseBodySize = devHttp->getSize();
-
-      /*        
-      int indexCtr = 0;
-      int pageWidth = 50;
-      */
-        
-      //delay(2000);
-
-    
-      az_result appendResult;
-      char httpStatusLine[40] {0};
-      if (httpCode > 0)  // Request was successful
-      {    
+        char httpStatusLine[40] {0};
+        if (httpCode > 0)  // Request was successful
+        {    
           sprintf((char *)httpStatusLine, "%s%i%s", "HTTP/1.1 ", httpCode, " ***\r\n");
-          appendResult = az_http_response_append(ref_response, az_span_create_from_str((char *)httpStatusLine));
+         __unused az_result appendResult = az_http_response_append(ref_response, az_span_create_from_str((char *)httpStatusLine));
 
-          //size_t respHeaderCount = httpClient.headers();
-          /*
-          for (size_t i = 0; i < respHeaderCount; i++)
-          {       
-            appendResult = az_http_response_append(ref_response, az_span_create_from_str((char *)devHttp->headerName(i).c_str()));          
-            appendResult = az_http_response_append(ref_response, az_span_create_from_str((char *)": "));
-            appendResult = az_http_response_append(ref_response, az_span_create_from_str((char *)devHttp->header(i).c_str()));
-            appendResult = az_http_response_append(ref_response, az_span_create_from_str((char *)"\r\n"));
+          
+
+          while(httpClient->headerAvailable())
+          {    
+            String theName = httpClient->readHeaderName();
+            for (int i = 0; i < targetHeadersCount; i++)
+            {                   
+                if(strcmp((const char *)theName.c_str(), (const char *)headerKeys[i]) == 0)
+                {               
+                    appendResult = az_http_response_append(ref_response, az_span_create_from_str((char *)theName.c_str()));          
+                    appendResult = az_http_response_append(ref_response, az_span_create_from_str((char *)": "));
+                    appendResult = az_http_response_append(ref_response, az_span_create_from_str((char *)httpClient->readHeaderValue().c_str()));
+                    appendResult = az_http_response_append(ref_response, az_span_create_from_str((char *)"\r\n"));                   
+                    break;
+                }
+            }                
           }
           appendResult = az_http_response_append(ref_response, az_span_create_from_str((char *)"\r\n"));
-          appendResult = az_http_response_append(ref_response, az_span_create_from_str((char *)devHttp->getString().c_str()));
-          */
-      }
-      else  // httpCode <= 0
-      {
-        int httpCodeCopy = httpCode;
-        char messageBuffer[30] {0};
-          
+          appendResult = az_http_response_append(ref_response, az_span_create_from_str((char *)httpClient->responseBody().c_str()));
+    
+        }
+        else  // httpCode <= 0
+        {
+          int httpCodeCopy = httpCode;
+          char messageBuffer[30] {0};
           // Hack: Convert negative return codes from post request into http codes 401 - 412, so that they can be handeled
           // (returned) as az_http_status_code
                  
@@ -271,71 +263,35 @@ az_http_client_send_request(az_http_request const* request, az_http_response* re
               httpCode = 404;
               strcpy(messageBuffer, mess4);
               break;
-            }
-            case -5: {
-              httpCode = 405;
-              strcpy(messageBuffer, mess5);
-              break;
-            }
-            case -6: {
-              httpCode = 406;
-              strcpy(messageBuffer, mess6);
-              break;
-            }
-            case -7: {
-              httpCode = 407;
-              strcpy(messageBuffer, mess7);
-              break;
-            }
-            case -8: {
-              httpCode = 408;
-              strcpy(messageBuffer, mess8);
-              break;
-            }
-            case -9: {
-              httpCode = 409;
-              strcpy(messageBuffer, mess9);
-              break;
-            }
-            case -10: {
-              httpCode = 410;
-              strcpy(messageBuffer, mess10);
-              break;
-            }
-            case -11: {
-              httpCode = 411;
-              strcpy(messageBuffer, mess11);
-              break;
-            }       
+            }        
             default: {
-              httpCode = 412;
+              httpCode = 404;
               strcpy(messageBuffer, mess12);
             }
           }     
           
           // Request failed because of internal http-client error
           sprintf((char *)httpStatusLine, "%s%i%s%i%s", "HTTP/1.1 ", httpCode, " Http-Client error ", httpCode, " \r\n");
-          appendResult = az_http_response_append(ref_response, az_span_create_from_str((char *)httpStatusLine));
+          __unused az_result appendResult = az_http_response_append(ref_response, az_span_create_from_str((char *)httpStatusLine));
           appendResult = az_http_response_append(ref_response, az_span_create_from_str((char *)"\r\n"));
           appendResult = az_http_response_append(ref_response, az_span_create_from_str((char *)messageBuffer));
-      }
-        
+        }
+     
+      //volatile size_t responseBodySize = httpClient->contentLength();
 
-        //devHttp->end();
-        //devHttp->endRequest();
-        
+       
         // For debugging
         
         //char buffer[700];
-        //az_span content = AZ_SPAN_FROM_BUFFER(buffer);
+        az_span content = AZ_SPAN_FROM_BUFFER(buffer);
 
-        //az_http_response_get_body(ref_response, &content);
+        az_http_response_get_body(ref_response, &content);
 
         //volatile int dummy349 = 1;
         
         //  Here you can see the received payload in chunks 
         // if you set a breakpoint in the loop 
-        /*
+        
         String payload = (char *)content._internal.ptr;
         int indexCtr = 0;
         int pageWidth = 50;
@@ -345,7 +301,7 @@ az_http_client_send_request(az_http_request const* request, az_http_response* re
           partMessage = payload.substring(indexCtr, indexCtr + pageWidth);
           indexCtr += pageWidth;
         }
-        */ 
+        
         
     }
     else
@@ -357,15 +313,22 @@ az_http_client_send_request(az_http_request const* request, az_http_response* re
       else
       {
         // Not used
-      }
-      
+      } 
     }
     httpClient->stop();
   }
-    
-    //httpClient.stop();
-    //delay(500);
-   return AZ_OK;
+  else
+  {
+    char httpStatusLine[40] {0};
+    char messageBuffer[30] {0};
+    strcpy(messageBuffer, mess4);
+    sprintf((char *)httpStatusLine, "%s%i%s%i%s", "HTTP/1.1 ", 404, " Http-Client error ", 404, " \r\n");
+    __unused az_result appendResult = az_http_response_append(ref_response, az_span_create_from_str((char *)httpStatusLine));
+    appendResult = az_http_response_append(ref_response, az_span_create_from_str((char *)"\r\n"));
+    appendResult = az_http_response_append(ref_response, az_span_create_from_str((char *)messageBuffer));
+  }
+      
+  return AZ_OK;
 }
 
 AZ_NODISCARD az_result az_platform_clock_msec(int64_t* out_clock_msec)
