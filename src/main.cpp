@@ -1060,7 +1060,7 @@ int getMonNum(const char * month)
   {  
     if (strcmp((char *)time_helpers.monthsOfTheYear[i], month) == 0)
     {
-      return i;
+      return i + 1;
     }   
   }
   return -1;
@@ -1072,7 +1072,7 @@ int getDayNum(const char * day)
   {  
     if (strcmp((char *)time_helpers.daysOfTheWeek[i], day) == 0)
     {
-      return i;
+      return i + 1;
     }   
   }
   return -1;
