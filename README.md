@@ -20,7 +20,7 @@ https://youtu.be/yVkcU8m84jY
  
 The stored data can be visualized in table form with the App 'AzureTabStorClient' or as line charts with the App 'Charts4Azure'. https://azuretabstorclient.wordpress.com/ https://azureiotcharts.home.blog/
 
-Before you start, install the latest firmware (actually v2.1.1) for the Wio Terminal WiFi module. https://wiki.seeedstudio.com/Wio-Terminal-Network-Overview/ https://wiki.seeedstudio.com/Wio-Terminal-Wi-Fi/
+Before you start, install the latest firmware (actually v2.1.2) for the Wio Terminal WiFi module. https://wiki.seeedstudio.com/Wio-Terminal-Network-Overview/ https://wiki.seeedstudio.com/Wio-Terminal-Wi-Fi/
 
 When you have cloned the repository 'AzureDataSender_Wio_Terminal' in your working directory proceed as follows:
 
