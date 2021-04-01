@@ -348,7 +348,7 @@ void setup()
   }
   
   //Initialize OnOffSwitcher (for tests and simulation)
-  onOffSwitcherWio.begin(TimeSpan(30 * 60));   // Toggle every 30 min
+  onOffSwitcherWio.begin(TimeSpan(15 * 60));   // Toggle every 15 min
   onOffSwitcherWio.SetInactive();
   //onOffSwitcherWio.SetActive();
 
@@ -1337,10 +1337,37 @@ float ReadAnalogSensor(int pSensorIndex)
             { frequDeterminer = 16; y_offset = 30; }
              
             int secondsOnDayElapsed = dateTimeUTCNow.second() + dateTimeUTCNow.minute() * 60 + dateTimeUTCNow.hour() *60 *60;
-                    
-            return roundf((float)25.0 * (float)sin(PI / 2.0 + (secondsOnDayElapsed * ((frequDeterminer * PI) / (float)86400)))) / 10  + y_offset;          
+            // RoSchmi
+            switch (pSensorIndex)
+            {
+              case 3:
+              {
+                return lastResetCause;
+              }
+              break;
+            
+              case 2:
+              {
+                double theRead = insertCounterAnalogTable;
+                theRead = theRead / 10;
+                return theRead;
+              }
+              break;
+              case 0:
+              case 1:
+              {
+                return roundf((float)25.0 * (float)sin(PI / 2.0 + (secondsOnDayElapsed * ((frequDeterminer * PI) / (float)86400)))) / 10  + y_offset;          
+              }
+              break;
+              default:
+              {
+                return 0;
+              }
+            }        
+  #endif    
+            
 
-  #endif
+  
 }
 
 void createSampleTime(DateTime dateTimeUTCNow, int timeZoneOffsetUTC, char * sampleTime)
