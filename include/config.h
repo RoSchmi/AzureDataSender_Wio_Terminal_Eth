@@ -22,8 +22,8 @@
 // The credentials of your WiFi router and the name and key of your
 // Azure Storage Account have to be set in the file config_secret.h 
 
-#define SENDINTERVAL_MINUTES  5         // Sendinterval in minutes, in this interval data are sent to the Cloud                                       
-                                              // is limited to be not below 1 second
+#define SENDINTERVAL_MINUTES  2.0            // Sendinterval in minutes, in this interval data are sent to the Cloud                                       
+                                             // is limited to be not below 1 second
 
 // Names for Tables in Azure Account, please obey rules for Azure Tablenames (e.g. no underscore allowed)
 // regular expression "^[A-Za-z][A-Za-z0-9]{2,62}$".
@@ -53,7 +53,7 @@
                                         // (Sensor readings are considered to be invalid if not successsfully
                                         // read within this timespan)
 
-#define NTP_UPDATE_INTERVAL_MINUTES 1000   //  With this interval sytem time is updated via NTP
+#define NTP_UPDATE_INTERVAL_MINUTES 20   //  With this interval sytem time is updated via NTP
                                         //  with internet time (is limited to be not below 1 min)
 
 #define UPDATE_TIME_FROM_AZURE_RESPONSE 1  // 1 = yes, 0 = no. SystemTime is updated from the Post response from Azure.
@@ -65,7 +65,7 @@
 #define WORK_WITH_WATCHDOG 0             // 1 = yes, 0 = no, Watchdog is used (1) or not used (0)
                                           // Watchdog doesn't work with Ethernet
 
-#define REBOOT_AFTER_FAILED_UPLOAD 1         // 1 = yes, 0 = no, Because of possible bug in the App or the firmware the App doesn't recover
+#define REBOOT_AFTER_FAILED_UPLOAD 0         // 1 = yes, 0 = no, Because of possible bug in the App or the firmware the App doesn't recover
                                               // after a failed upload, so we should reboot (as long as the bug isn't solved)   
 
 

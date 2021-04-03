@@ -188,8 +188,9 @@ uint32_t tryUploadCounter = 0;
 uint32_t timeNtpUpdateCounter = 0;
 volatile int32_t sysTimeNtpDelta = 0;
 
-volatile uint32_t previousNtpMillis = 0;
-volatile uint32_t previousSensorReadMillis = 0;
+uint32_t previousNtpUtdateMillis = 0;
+uint32_t previousNtpRequestMillis = 0;
+uint32_t previousSensorReadMillis = 0;
 
 uint32_t ntpUpdateInterval = 60000;
 
@@ -574,7 +575,8 @@ delay(500);
   fillDisplayFrame(999.9, 999.9, 999.9, 999.9, false, false, false, false, sendResultState, tryUploadCounter);
   delay(50);
 
-  previousNtpMillis = millis();
+  previousNtpUtdateMillis = millis();
+  previousNtpRequestMillis = millis();
 }
 
 void loop() 
@@ -593,9 +595,9 @@ void loop()
     #endif
 
     // Update RTC from Ntp when ntpUpdateInterval has expired
-    if ((currentMillis - previousNtpMillis) >= ntpUpdateInterval) 
+    if (((currentMillis - previousNtpUtdateMillis) >= ntpUpdateInterval) && ((currentMillis - previousNtpRequestMillis) >= 5000)) 
     {
-        previousNtpMillis = currentMillis;
+        previousNtpRequestMillis = currentMillis;
         dateTimeUTCNow = sysTime.getTime();
         uint32_t actRtcTime = dateTimeUTCNow.secondstime();
 
@@ -608,7 +610,8 @@ void loop()
         }
         
         if (utcNtpTime != 0 )       // if NTP request was successful --> synchronize RTC 
-        {       
+        { 
+            previousNtpUtdateMillis = currentMillis;      
             dateTimeUTCNow = utcNtpTime;
             sysTimeNtpDelta = actRtcTime - dateTimeUTCNow.secondstime();
             
@@ -1337,6 +1340,7 @@ float ReadAnalogSensor(int pSensorIndex)
             { frequDeterminer = 16; y_offset = 30; }
              
             int secondsOnDayElapsed = dateTimeUTCNow.second() + dateTimeUTCNow.minute() * 60 + dateTimeUTCNow.hour() *60 *60;
+            
             // RoSchmi
             switch (pSensorIndex)
             {
@@ -1347,9 +1351,9 @@ float ReadAnalogSensor(int pSensorIndex)
               break;
             
               case 2:
-              {
-                double theRead = insertCounterAnalogTable;
-                theRead = theRead / 10;
+              { 
+                uint32_t showInsertCounter = insertCounterAnalogTable % 50;               
+                double theRead = ((double)showInsertCounter) / 10;
                 return theRead;
               }
               break;
@@ -1363,11 +1367,8 @@ float ReadAnalogSensor(int pSensorIndex)
               {
                 return 0;
               }
-            }        
-  #endif    
-            
-
-  
+            }     
+  #endif     
 }
 
 void createSampleTime(DateTime dateTimeUTCNow, int timeZoneOffsetUTC, char * sampleTime)
