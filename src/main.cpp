@@ -594,13 +594,12 @@ void loop()
       SAMCrashMonitor::iAmAlive();
     #endif
 
-    // Update RTC from Ntp when ntpUpdateInterval has expired
-    if (((currentMillis - previousNtpUtdateMillis) >= ntpUpdateInterval) && ((currentMillis - previousNtpRequestMillis) >= 5000)) 
+    // Update RTC from Ntp when ntpUpdateInterval has expired, retry after 20 sec if update was not successful
+    if (((currentMillis - previousNtpUtdateMillis) >= ntpUpdateInterval) && ((currentMillis - previousNtpRequestMillis) >= 20000)) 
     {
-        previousNtpRequestMillis = currentMillis;
         dateTimeUTCNow = sysTime.getTime();
         uint32_t actRtcTime = dateTimeUTCNow.secondstime();
-
+    
         int loopCtr = 0;
         unsigned long  utcNtpTime = getNTPtime();   // Get NTP time, try up to 4 times        
         while ((loopCtr < 4) && utcTime == 0)
@@ -608,6 +607,7 @@ void loop()
           loopCtr++;
           utcTime = getNTPtime();
         }
+        previousNtpRequestMillis = currentMillis;
         
         if (utcNtpTime != 0 )       // if NTP request was successful --> synchronize RTC 
         { 
